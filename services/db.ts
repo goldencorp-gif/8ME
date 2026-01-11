@@ -89,6 +89,12 @@ export const db = {
        const agencies = await db.centralRegistry.listAgencies();
        const updated = agencies.map(a => a.contactEmail === email ? { ...a, status } : a);
        localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
+    },
+    // New: Allow Master to reset central password
+    updateCredentials: async (email: string, newPasswordHash: string) => {
+       const agencies = await db.centralRegistry.listAgencies();
+       const updated = agencies.map(a => a.contactEmail === email ? { ...a, passwordHash: newPasswordHash } : a);
+       localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
     }
   },
 

@@ -17,19 +17,36 @@ async function hashPassword(password: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Helper to generate secure random password
+function generateSecurePassword(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+  let password = "";
+  const array = new Uint32Array(12);
+  window.crypto.getRandomValues(array);
+  for (let i = 0; i < 12; i++) {
+    password += chars[array[i] % chars.length];
+  }
+  return password;
+}
+
 const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
   const { role, resetLocalUserPassword } = useAuth();
   
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [localUsers, setLocalUsers] = useState<UserAccount[]>([]);
 
+  // Create Agency State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newAgency, setNewAgency] = useState({
     name: '',
     email: '',
-    password: '', // New field for manual credential issuance
+    password: '', 
     plan: 'Starter' as 'Starter' | 'Growth' | 'Enterprise'
   });
+
+  // Reset Credentials State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetData, setResetData] = useState({ email: '', newPassword: '' });
 
   useEffect(() => {
       // Load from Central Registry (Cloud Sim)
@@ -94,8 +111,12 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
     // Update Local State
     setAgencies([...agencies, created]);
     setIsCreateModalOpen(false);
+    
+    // Store creds temporarily to show alert
+    const createdPass = newAgency.password;
     setNewAgency({ name: '', email: '', password: '', plan: 'Starter' });
-    alert(`Credentials Issued!\n\nUser: ${created.contactEmail}\nPass: ${newAgency.password}\n\nEmail these to the client manually.`);
+    
+    alert(`Credentials Issued!\n\nAgency: ${created.name}\nUser: ${created.contactEmail}\nPass: ${createdPass}\n\nEmail these to the client manually.`);
   };
 
   const handleStatusChange = async (agency: Agency, newStatus: Agency['status']) => {
@@ -103,7 +124,19 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
       setAgencies(prev => prev.map(a => a.id === agency.id ? { ...a, status: newStatus } : a));
   };
 
-  const handleResetPassword = async (email: string) => {
+  const openResetModal = (email: string) => {
+      setResetData({ email, newPassword: generateSecurePassword() });
+      setIsResetModalOpen(true);
+  };
+
+  const submitCentralReset = async () => {
+      const hash = await hashPassword(resetData.newPassword);
+      await db.centralRegistry.updateCredentials(resetData.email, hash);
+      alert(`Password Reset Successful for ${resetData.email}\n\nNew Temporary Password: ${resetData.newPassword}`);
+      setIsResetModalOpen(false);
+  };
+
+  const handleResetLocalPassword = async (email: string) => {
       if (confirm(`MASTER OVERRIDE:\n\nAre you sure you want to forcibly reset the password for ${email}?`)) {
           await resetLocalUserPassword(email);
       }
@@ -178,6 +211,15 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                         </span>
                      </td>
                      <td className="px-8 py-4 text-right flex justify-end gap-2">
+                        {/* Credential Recovery Button */}
+                        <button 
+                            onClick={() => openResetModal(agency.contactEmail)}
+                            className="p-2 text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Reset Password"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                        </button>
+
                         {agency.status === 'Active' ? (
                             <>
                                 <button 
@@ -242,7 +284,7 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                                   </td>
                                   <td className="px-6 py-4 text-right">
                                       <button 
-                                        onClick={() => handleResetPassword(user.email)}
+                                        onClick={() => handleResetLocalPassword(user.email)}
                                         className="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline"
                                       >
                                           Reset Local Pass
@@ -256,6 +298,7 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
           </div>
       </div>
 
+      {/* Creation Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setIsCreateModalOpen(false)} />
@@ -285,14 +328,24 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Temporary Password</label>
-                    <input 
-                       required 
-                       type="text" 
-                       value={newAgency.password}
-                       onChange={(e) => setNewAgency({...newAgency, password: e.target.value})}
-                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
-                       placeholder="e.g. Welcome2024!"
-                    />
+                    <div className="flex gap-2">
+                        <input 
+                        required 
+                        type="text" 
+                        value={newAgency.password}
+                        onChange={(e) => setNewAgency({...newAgency, password: e.target.value})}
+                        className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                        placeholder="e.g. Welcome2024!"
+                        />
+                        <button 
+                            type="button"
+                            onClick={() => setNewAgency({...newAgency, password: generateSecurePassword()})}
+                            className="px-3 bg-emerald-100 text-emerald-600 rounded-xl hover:bg-emerald-200"
+                            title="Auto-Generate Secure Password"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        </button>
+                    </div>
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Subscription Plan</label>
@@ -339,6 +392,38 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
               </form>
            </div>
         </div>
+      )}
+
+      {/* Central Password Reset Modal */}
+      {isResetModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setIsResetModalOpen(false)} />
+            <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 text-center">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mx-auto mb-4">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">Reset Agency Password</h3>
+                <p className="text-xs text-slate-500 mb-6">Generating new temporary credential for <span className="font-bold text-slate-700">{resetData.email}</span>.</p>
+                
+                <div className="bg-slate-100 p-4 rounded-xl mb-6">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Temporary Password</p>
+                    <div className="flex items-center justify-center gap-2">
+                        <p className="text-lg font-mono font-bold text-slate-900">{resetData.newPassword}</p>
+                        <button 
+                            onClick={() => setResetData({ ...resetData, newPassword: generateSecurePassword() })}
+                            className="text-indigo-600 hover:text-indigo-800"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex gap-3">
+                    <button onClick={() => setIsResetModalOpen(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50">Cancel</button>
+                    <button onClick={submitCentralReset} className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-600 shadow-xl shadow-amber-200">Confirm Reset</button>
+                </div>
+            </div>
+          </div>
       )}
     </div>
   );
