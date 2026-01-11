@@ -278,10 +278,11 @@ const App: React.FC = () => {
       case 'tenancies':
         return <Tenancies 
                   properties={properties} 
+                  maintenanceTasks={maintenanceTasks} // Added maintenanceTasks prop
                   onSelectProperty={setSelectedProperty} 
                   onEditProperty={handleEditProperty} 
                   onUpdateProperty={handleAddOrUpdateProperty} 
-                  onNavigate={setActiveTab} // Pass navigation handler
+                  onNavigate={setActiveTab} 
                />;
       case 'trust':
         return <TrustAccounting properties={properties} transactions={transactions} onAddTransaction={handleAddTransaction} />;

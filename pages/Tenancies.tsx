@@ -1,18 +1,19 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Property, InspectionFollowUp } from '../types';
+import { Property, InspectionFollowUp, MaintenanceTask } from '../types';
 import StatCard from '../components/StatCard';
 import TenantDetailView from '../components/TenantDetailView';
 
 interface TenanciesProps {
   properties: Property[];
+  maintenanceTasks?: MaintenanceTask[];
   onSelectProperty: (prop: Property) => void;
   onEditProperty: (prop: Property) => void;
   onUpdateProperty: (prop: Property) => void;
   onNavigate?: (tab: string) => void;
 }
 
-const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onEditProperty, onUpdateProperty, onNavigate }) => {
+const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = [], onSelectProperty, onEditProperty, onUpdateProperty, onNavigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'occupied' | 'vacant' | 'arrears'>('all');
 
@@ -93,7 +94,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
     
     if (diffDays < 0) return { label: 'Overdue', classes: 'bg-rose-50 text-rose-600 border-rose-100' };
     if (diffDays < 14) return { label: `Due (${diffDays}d)`, classes: 'bg-indigo-50 text-indigo-600 border-indigo-100 animate-pulse' };
-    return { label: target.toLocaleDateString('en-AU'), classes: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+    return { label: target.toLocaleDateString('en-AU', {day: 'numeric', month: 'short'}), classes: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
   };
 
   const openInspectModal = (prop: Property) => {
@@ -263,19 +264,22 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
             <thead className="bg-white border-b border-slate-100">
               <tr>
                 <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Tenant Detail</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Services</th>
+                <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Lease Terms</th>
+                <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Dates & Activity</th>
                 <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Action</th>
+                <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-24 text-center text-slate-400 italic">No records found matching your current view.</td>
+                  <td colSpan={5} className="px-8 py-24 text-center text-slate-400 italic">No records found matching your current view.</td>
                 </tr>
               ) : (
                 filteredList.map((prop) => {
                   const inspection = getInspectionStatus(prop);
+                  const activeMaintenance = maintenanceTasks.filter(t => t.propertyId === prop.id && t.status !== 'Completed').length;
+                  
                   return (
                     <tr key={prop.id} className="hover:bg-slate-50/80 transition-all group">
                       <td className="px-8 py-6">
@@ -286,8 +290,15 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
                           <div>
                             {prop.tenantName ? (
                               <>
-                                <p className="font-bold text-slate-900 text-base">{prop.tenantName}</p>
-                                <p className="text-xs text-slate-400 font-medium truncate max-w-[200px]">{prop.address}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-bold text-slate-900 text-base">{prop.tenantName}</p>
+                                    {/* Quick Contact Indicators */}
+                                    <div className="flex space-x-1">
+                                        {prop.tenantEmail && <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" title="Email Active" />}
+                                        {prop.tenantPhone && <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full" title="Mobile Active" />}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-slate-400 font-medium truncate max-w-[200px] mt-0.5">{prop.address}</p>
                               </>
                             ) : (
                               <button 
@@ -300,42 +311,81 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
                           </div>
                         </div>
                       </td>
+                      
+                      {/* Lease Terms Column */}
                       <td className="px-8 py-6">
-                        <div className="flex space-x-2">
+                         {prop.tenantName ? (
+                            <div>
+                                <p className="font-bold text-slate-900 text-sm">
+                                    ${prop.rentAmount.toLocaleString()} 
+                                    <span className="text-xs text-slate-400 font-normal">/{prop.rentFrequency === 'Weekly' ? 'wk' : 'mo'}</span>
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${prop.leaseEnd && new Date(prop.leaseEnd) < new Date() ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">
+                                        {prop.leaseEnd 
+                                            ? `Ends ${new Date(prop.leaseEnd).toLocaleDateString('en-AU', {month: 'short', day: 'numeric'})}` 
+                                            : 'Periodic'}
+                                    </p>
+                                </div>
+                                {prop.bondAmount && <p className="text-[9px] text-slate-400 mt-0.5">Bond: ${prop.bondAmount}</p>}
+                            </div>
+                         ) : (
+                            <span className="text-xs text-slate-400 italic">No Active Lease</span>
+                         )}
+                      </td>
+
+                      {/* Dates & Activity Column */}
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col items-start gap-2">
                             {/* Inspection Button */}
                             <button 
-                            onClick={(e) => { e.stopPropagation(); openInspectModal(prop); }}
-                            title="View Condition Report Actions"
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${inspection.classes}`}
+                                onClick={(e) => { e.stopPropagation(); openInspectModal(prop); }}
+                                title="View Condition Report Actions"
+                                className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${inspection.classes} flex items-center gap-1`}
                             >
-                            {inspection.label}
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                {inspection.label}
                             </button>
 
-                            {/* Revenue Generation Button (Monetization) */}
-                            {prop.tenantName && (
-                                <button
-                                    onClick={(e) => handleConnectUtility(e, prop)}
-                                    className="px-3 py-1.5 bg-gradient-to-r from-orange-400 to-rose-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-orange-200 transition-all active:scale-95 flex items-center gap-1"
-                                    title="Earn commission by connecting utilities"
-                                >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                    Connect
-                                </button>
+                            {/* Maintenance Alert */}
+                            {activeMaintenance > 0 && (
+                                <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2-2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                    {activeMaintenance} Active Task{activeMaintenance > 1 ? 's' : ''}
+                                </span>
                             )}
                         </div>
                       </td>
+
+                      {/* Status Column */}
                       <td className="px-8 py-6">
-                        <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${getStatusColor(prop.status)}`}>
+                        <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border ${getStatusColor(prop.status)}`}>
                           {prop.status}
                         </span>
                       </td>
+
+                      {/* Actions Column */}
                       <td className="px-8 py-6 text-right">
-                        <button 
-                          onClick={() => setViewingTenant(prop)}
-                          className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-600 shadow-md"
-                        >
-                          View Profile
-                        </button>
+                        <div className="flex justify-end gap-2">
+                            {/* Connect Utility (Revenue) */}
+                            {prop.tenantName && (
+                                <button
+                                    onClick={(e) => handleConnectUtility(e, prop)}
+                                    className="p-2 bg-white text-orange-500 border border-slate-100 rounded-xl hover:bg-orange-50 hover:border-orange-200 transition-all shadow-sm"
+                                    title="Connect Utilities"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                </button>
+                            )}
+                            
+                            <button 
+                            onClick={() => setViewingTenant(prop)}
+                            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-600 shadow-md"
+                            >
+                            View Profile
+                            </button>
+                        </div>
                       </td>
                     </tr>
                   );
