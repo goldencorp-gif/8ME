@@ -5,6 +5,28 @@ This is a dual-purpose application. It acts as a modern **SaaS Web Application**
 
 ---
 
+## 🎨 Custom Branding & Logos
+
+You can customize the application logos without rebuilding the app code.
+
+### How to use Custom Logos
+1.  Navigate to the `site-settings.json` file in the root directory (or create it if it doesn't exist).
+2.  Update the fields with URLs to your logo images.
+
+**Example `site-settings.json`:**
+```json
+{
+  "footerLogoUrl": "https://your-site.com/logo-footer.png",
+  "headerLogoUrl": "https://your-site.com/logo-header.png"
+}
+```
+
+*   **headerLogoUrl**: Used in the application sidebar and landing page navigation.
+*   **footerLogoUrl**: Used in the footer of the landing page.
+*   If these fields are left empty (`""`), the default 8ME branding will be used.
+
+---
+
 ## 🚀 Option 1: Run as a Web App (SaaS)
 *Best for: Desktop users, Office Admins, and selling subscriptions directly to agencies.*
 

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Property, Inquiry } from '../types';
+import { BrandLogo } from './BrandLogo';
 
 interface LandingPageProps {
   onLoginClick: () => void;
@@ -107,10 +108,7 @@ For privacy inquiries, please contact: privacy@8me.com
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <div className="bg-indigo-600 p-2 rounded-lg">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-              </div>
-              <span className="text-xl font-bold tracking-tight text-white">8<span className="text-indigo-400">ME</span></span>
+              <BrandLogo variant="landing-nav" />
             </div>
             
             <div className="hidden md:flex space-x-8 text-sm font-bold text-slate-300">
@@ -498,7 +496,7 @@ For privacy inquiries, please contact: privacy@8me.com
       <footer className="bg-slate-950 py-12 border-t border-slate-900">
          <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <span className="text-lg font-bold text-white tracking-tight">8<span className="text-indigo-400">ME</span></span>
+              <BrandLogo variant="footer" />
               <span className="text-slate-600 text-sm px-2">|</span>
               <span className="text-slate-600 text-xs uppercase tracking-widest font-bold">Agent Operating System</span>
             </div>
