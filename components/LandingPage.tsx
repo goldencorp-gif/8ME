@@ -399,7 +399,7 @@ For privacy inquiries, please contact: privacy@8me.com
                  {/* Starter */}
                  <div className="p-8 rounded-3xl border border-slate-200 transition-all">
                     <h3 className="text-xl font-bold text-slate-900">Starter</h3>
-                    <p className="text-3xl font-black mt-4">$68<span className="text-sm font-bold text-slate-400">/mo</span></p>
+                    <p className="text-3xl font-black mt-4">$54.99<span className="text-sm font-bold text-slate-400">/mo</span></p>
                     <p className="text-sm text-slate-500 mt-2 mb-6">Up to 50 Properties</p>
                     
                     {showComparison && (
@@ -407,7 +407,7 @@ For privacy inquiries, please contact: privacy@8me.com
                          <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-1">Market Avg</p>
                          <p className="text-lg font-black text-rose-500 strike-through line-through opacity-50">$110/mo</p>
                          <div className="mt-2 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">
-                            Save $500/yr
+                            Save $660/yr
                          </div>
                       </div>
                     )}
@@ -417,7 +417,7 @@ For privacy inquiries, please contact: privacy@8me.com
                  <div className="p-10 rounded-[2.5rem] bg-slate-900 text-white shadow-2xl scale-110 relative z-10">
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600 px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Most Popular</div>
                     <h3 className="text-xl font-bold">Growth</h3>
-                    <p className="text-4xl font-black mt-4">$228<span className="text-sm font-bold text-slate-400">/mo</span></p>
+                    <p className="text-4xl font-black mt-4">$199.99<span className="text-sm font-bold text-slate-400">/mo</span></p>
                     <p className="text-sm text-slate-400 mt-2 mb-6">Up to 200 Properties</p>
                     
                     {showComparison && (
@@ -425,7 +425,7 @@ For privacy inquiries, please contact: privacy@8me.com
                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Market Avg</p>
                          <p className="text-lg font-black text-slate-500 strike-through line-through decoration-slate-500">$330/mo</p>
                          <div className="mt-2 bg-emerald-500 text-white px-2 py-1 rounded text-xs font-bold">
-                            Save $1,200/yr
+                            Save $1,560/yr
                          </div>
                       </div>
                     )}
