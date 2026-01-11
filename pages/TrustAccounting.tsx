@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Property, Transaction } from '../types';
+import { parseBankStatement } from '../services/geminiService';
 
 interface TrustAccountingProps {
   properties: Property[];
@@ -30,7 +31,9 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
   // Bank Feed State
   const [bankLines, setBankLines] = useState<BankLine[]>([]);
   const [isMatching, setIsMatching] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scanInputRef = useRef<HTMLInputElement>(null);
 
   // Agency/Trust Config State
   const [trustConfig, setTrustConfig] = useState({ bank: 'Not Configured', bsb: '', acc: '' });
@@ -123,6 +126,36 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
     };
     reader.readAsText(file);
     if(fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleAiStatementUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+        const base64 = (reader.result as string).split(',')[1];
+        const extractedLines = await parseBankStatement(base64);
+        
+        if (extractedLines && extractedLines.length > 0) {
+            const newLines: BankLine[] = extractedLines.map((l: any, i: number) => ({
+                id: `ai-scan-${Date.now()}-${i}`,
+                date: l.date,
+                description: l.description,
+                amount: l.amount,
+                type: l.type,
+                matchStatus: 'Unmatched'
+            }));
+            setBankLines(prev => [...prev, ...newLines]);
+            alert(`AI successfully extracted ${newLines.length} transactions from the statement.`);
+        } else {
+            alert("Could not extract transactions. Please ensure the image is clear and contains a visible transaction table.");
+        }
+        setIsScanning(false);
+        if(scanInputRef.current) scanInputRef.current.value = '';
+    };
+    reader.readAsDataURL(file);
   };
 
   const runAutoMatch = () => {
@@ -376,6 +409,26 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12 relative">
       
+      {/* Compliance Disclaimer */}
+      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r-xl shadow-sm">
+        <div className="flex items-start">
+          <div className="shrink-0">
+            <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-bold text-amber-800">Trust Accounting Disclaimer</h3>
+            <div className="mt-2 text-xs text-amber-700 space-y-1">
+              <p>• This application does not have active bank integrations and is not connected to financial institutions.</p>
+              <p>• Users must manually enter or import monthly bank statement information for each trust account.</p>
+              <p>• This tool is provided to assist record-keeping only and does not replace professional trust accounting or compliance obligations.</p>
+              <p>• Final review and confirmation of figures is the user’s responsibility.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 3-Way Reconciliation Widget */}
       <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl overflow-hidden relative">
          <div className="absolute top-0 right-0 p-32 bg-indigo-600 rounded-full blur-[100px] opacity-20"></div>
@@ -531,7 +584,7 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                   </div>
                </div>
                <div className="flex items-center gap-3">
-                  {/* Hidden File Input */}
+                  {/* Hidden File Inputs */}
                   <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -539,12 +592,40 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                     onChange={handleFileUpload} 
                     className="hidden" 
                   />
+                  <input 
+                    type="file" 
+                    ref={scanInputRef} 
+                    accept="image/*" 
+                    capture="environment" // Hint to use camera on mobile
+                    onChange={handleAiStatementUpload} 
+                    className="hidden" 
+                  />
+
+                  {/* AI Scan Button */}
+                  <button 
+                    onClick={() => scanInputRef.current?.click()}
+                    disabled={isScanning}
+                    className="px-6 py-3 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 shadow-lg shadow-violet-200 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isScanning ? (
+                        <>
+                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            Analyzing...
+                        </>
+                    ) : (
+                        <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            Scan Statement (AI)
+                        </>
+                    )}
+                  </button>
+
                   <button 
                     onClick={() => fileInputRef.current?.click()}
                     className="px-6 py-3 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-50 active:scale-95 transition-all flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    Upload Statement
+                    Upload CSV
                   </button>
                   <button 
                     onClick={runAutoMatch} 
@@ -561,7 +642,7 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                  <div className="text-center py-20 bg-slate-50 rounded-[2rem] border border-slate-100">
                     <svg className="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <h3 className="text-lg font-bold text-slate-900">All Caught Up!</h3>
-                    <p className="text-slate-500 text-sm">Upload a new statement file to process transactions.</p>
+                    <p className="text-slate-500 text-sm">Scan or upload a new statement file to process transactions.</p>
                  </div>
                ) : (
                  bankLines.filter(l => l.matchStatus !== 'Processed').map(line => (

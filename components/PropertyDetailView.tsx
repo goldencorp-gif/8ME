@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Property, Transaction, PropertyDocument } from '../types';
 import { parseTransactionFromText } from '../services/geminiService';
 
@@ -27,6 +27,11 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const [invoiceSubFolder, setInvoiceSubFolder] = useState<'Owner' | 'Tenant'>('Owner');
   const [previewDoc, setPreviewDoc] = useState<PropertyDocument | null>(null);
   
+  // File Upload Refs
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const [replacingDocId, setReplacingDocId] = useState<string | null>(null);
+
   // AI Ledger State
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -59,6 +64,53 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         ...property,
         documents: [...docs, newDoc]
       });
+    }
+  };
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onUpdateProperty) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onUpdateProperty({
+          ...property,
+          imageUrl: reader.result as string
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerMediaReplace = (docId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReplacingDocId(docId);
+    mediaInputRef.current?.click();
+  };
+
+  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && replacingDocId && onUpdateProperty) {
+       const reader = new FileReader();
+       reader.onloadend = () => {
+          const updatedDocs = (property.documents || []).map(d => {
+             if (d.id === replacingDocId) {
+                return {
+                   ...d,
+                   name: file.name,
+                   size: `${(file.size / 1024).toFixed(0)} KB`,
+                   dateAdded: new Date().toISOString().split('T')[0],
+                   url: reader.result as string, 
+                   type: 'Image' // Assume image replacement for this context
+                };
+             }
+             return d;
+          });
+          onUpdateProperty({ ...property, documents: updatedDocs });
+          setReplacingDocId(null);
+          // Clear input
+          if(mediaInputRef.current) mediaInputRef.current.value = '';
+       };
+       reader.readAsDataURL(file);
     }
   };
 
@@ -286,10 +338,35 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
-      <div className="absolute inset-y-0 right-0 max-w-3xl w-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 rounded-l-[3rem]">
+      <div className="absolute inset-y-0 right-0 max-w-3xl w-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 rounded-l-[3rem] overflow-hidden">
         
-        {/* Header */}
-        <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 rounded-tl-[3rem]">
+        {/* Banner / Cover Image */}
+        <div className="h-60 w-full relative group shrink-0">
+            <img 
+                src={property.imageUrl} 
+                className="w-full h-full object-cover" 
+                alt="Property Cover"
+            />
+            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-all duration-300" />
+            
+            <button 
+                onClick={() => coverInputRef.current?.click()}
+                className="absolute bottom-4 right-4 px-4 py-2 bg-white/90 hover:bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 flex items-center gap-2"
+            >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Change Photo
+            </button>
+            <input 
+                type="file" 
+                ref={coverInputRef} 
+                className="hidden" 
+                accept="image/*"
+                onChange={handleCoverUpload}
+            />
+        </div>
+
+        {/* Header (Text Overlay/Bottom) */}
+        <div className="px-10 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
           <div>
             <div className="flex items-center space-x-3 mb-2">
               <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-xl shadow-sm ${property.propertyType === 'Commercial' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>{property.propertyType}</span>
@@ -552,6 +629,15 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {/* Hidden Input for Media Replacement */}
+                  <input 
+                    type="file" 
+                    ref={mediaInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleMediaUpload}
+                  />
+
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <button 
                       onClick={() => setSelectedFolder(null)}
@@ -607,6 +693,16 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                               </div>
                             </div>
                             <div className="flex items-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {/* Edit Button for Media */}
+                              {(selectedFolder === 'Media' || doc.type === 'Image') && (
+                                <button 
+                                    onClick={(e) => triggerMediaReplace(doc.id, e)}
+                                    className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:shadow-md transition-all"
+                                    title="Replace Image"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                </button>
+                              )}
                               <button 
                                 onClick={(e) => handleDownload(doc, e)}
                                 className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:shadow-md transition-all"

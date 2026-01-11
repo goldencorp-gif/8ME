@@ -308,6 +308,40 @@ export const parseInvoiceRequest = async (
   }
 };
 
+export const parseBankStatement = async (imageBase64: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+          { text: `Analyze this bank statement image. Extract all transactions into a JSON array.
+            For each transaction, provide:
+            - date (YYYY-MM-DD)
+            - description (string)
+            - amount (number, absolute value)
+            - type ("Credit" for deposits/in, "Debit" for withdrawals/out)
+            
+            Return ONLY the JSON array. Example:
+            [
+              {"date": "2024-05-01", "description": "Rent Payment", "amount": 500.00, "type": "Credit"},
+              ...
+            ]
+            `
+          }
+        ]
+      },
+      config: { responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || '[]');
+  } catch (error) {
+    console.error("Gemini Statement Error:", error);
+    return [];
+  }
+};
+
 export const prioritizeMaintenance = async (issue: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
