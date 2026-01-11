@@ -9,13 +9,107 @@ interface ScheduleProps {
   maintenanceTasks?: MaintenanceTask[];
   manualEvents: CalendarEvent[];
   onAddEvent: (event: CalendarEvent) => void;
+  onRecordHistory?: (record: any) => void;
 }
 
-const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks = [], manualEvents, onAddEvent }) => {
+// --- STYLING LOGIC (Moved outside component) ---
+
+// 1. Property-Based Background Color (Deterministic Hash)
+const getPropertyBackgroundColor = (address?: string) => {
+  if (!address || address === 'General Appointment') return 'bg-white';
+  
+  const colors = [
+    'bg-red-50', 'bg-orange-50', 'bg-amber-50', 'bg-yellow-50', 'bg-lime-50',
+    'bg-green-50', 'bg-emerald-50', 'bg-teal-50', 'bg-cyan-50', 'bg-sky-50',
+    'bg-blue-50', 'bg-indigo-50', 'bg-violet-50', 'bg-purple-50', 'bg-fuchsia-50',
+    'bg-pink-50', 'bg-rose-50', 'bg-slate-100', 'bg-gray-100'
+  ];
+  
+  let hash = 0;
+  for (let i = 0; i < address.length; i++) {
+    hash = address.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
+// 2. Event Type Text & Border Color (Fixed for consistency)
+const getEventTypeStyles = (type: CalendarEvent['type']) => {
+  switch (type) {
+    case 'Inspection': return 'text-indigo-800 border-indigo-500';
+    case 'Legal': return 'text-rose-800 border-rose-500';
+    case 'Lease': return 'text-emerald-800 border-emerald-500';
+    case 'Maintenance': return 'text-amber-800 border-amber-500';
+    case 'Viewing': return 'text-sky-800 border-sky-500';
+    default: return 'text-slate-800 border-slate-400';
+  }
+};
+
+// 3. Badge Style for Agenda View (Keep distinct)
+const getEventTypeBadgeColor = (type: CalendarEvent['type']) => {
+  switch (type) {
+    case 'Inspection': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+    case 'Legal': return 'bg-rose-100 text-rose-700 border-rose-200';
+    case 'Lease': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    case 'Maintenance': return 'bg-amber-100 text-amber-700 border-amber-200';
+    case 'Viewing': return 'bg-sky-100 text-sky-700 border-sky-200';
+    default: return 'bg-slate-100 text-slate-700 border-slate-200';
+  }
+};
+
+interface EventCardProps {
+  ev: CalendarEvent;
+  onDraftNotice: (ev: CalendarEvent) => void;
+  onAiSuggest: (ev: CalendarEvent) => void;
+}
+
+// Helper component for rendering a single event card
+const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest }) => (
+  <div className="group relative p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all duration-300">
+      <div className="flex justify-between items-start mb-2">
+          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeBadgeColor(ev.type)}`}>
+          {ev.type}
+          </span>
+          <div className="flex items-center gap-2">
+          {ev.type === 'Inspection' && (
+              <button 
+                  onClick={(e) => { e.stopPropagation(); onDraftNotice(ev); }}
+                  className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 px-2 py-0.5 rounded transition-colors"
+                  title="Send Entry Notice"
+              >
+                  Email Notice
+              </button>
+          )}
+          <button 
+              onClick={(e) => { e.stopPropagation(); onAiSuggest(ev); }} 
+              className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+              title="Get AI Suggestions"
+          >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              AI Suggest
+          </button>
+          <span className="text-xs font-bold text-slate-900">{ev.time}</span>
+          </div>
+      </div>
+      <h4 className="font-bold text-slate-900">{ev.title}</h4>
+      <p className="text-xs text-slate-500 mt-1">{ev.propertyAddress}</p>
+      {ev.description && (
+          <div className="mt-3 pt-3 border-t border-slate-200/50">
+          <p className="text-xs text-slate-600 leading-relaxed">{ev.description}</p>
+          </div>
+      )}
+  </div>
+);
+
+const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks = [], manualEvents, onAddEvent, onRecordHistory }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+  
+  // View Management State
+  const [viewMode, setViewMode] = useState<'time' | 'property'>('time');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'All' | 'Inspection' | 'Maintenance' | 'Viewing'>('All');
   
   // Custom Sort Order (Event IDs)
   const [customOrder, setCustomOrder] = useState<string[]>([]);
@@ -143,6 +237,19 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   const handleSendNotice = () => {
     // Mock send
     alert(`Notice sent successfully to tenant at ${selectedNoticeEvent?.propertyAddress}`);
+    
+    // Record to history if handler provided
+    if (onRecordHistory && selectedNoticeEvent) {
+        onRecordHistory({
+            id: `hist-notice-${Date.now()}`,
+            date: new Date().toISOString(),
+            type: 'Communication',
+            description: `Entry Notice Sent for ${selectedNoticeEvent.title}`,
+            propertyAddress: selectedNoticeEvent.propertyAddress,
+            relatedId: selectedNoticeEvent.id
+        });
+    }
+
     setIsNoticeModalOpen(false);
     setNoticeDraft('');
     setSelectedNoticeEvent(null);
@@ -182,69 +289,55 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
 
   const rawSelectedDayEvents = getEventsForDate(selectedDate);
   
-  // Apply Custom Sort if available
-  const selectedDayEvents = useMemo(() => {
+  // --- FILTERING & SORTING LOGIC ---
+  const filteredEvents = useMemo(() => {
+    let events = [...rawSelectedDayEvents];
+
+    // 1. Search Filter
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      events = events.filter(e => 
+        e.title.toLowerCase().includes(lower) || 
+        (e.propertyAddress || '').toLowerCase().includes(lower) ||
+        (e.description || '').toLowerCase().includes(lower)
+      );
+    }
+
+    // 2. Type Filter
+    if (filterType !== 'All') {
+      events = events.filter(e => e.type === filterType || (filterType === 'Viewing' && (e.type === 'Lease' || e.type === 'Viewing')));
+    }
+
+    // 3. Custom Ordering (Voice Command)
     if (customOrder.length > 0) {
-      // Sort based on index in customOrder array
-      return [...rawSelectedDayEvents].sort((a, b) => {
+      events.sort((a, b) => {
         const idxA = customOrder.indexOf(a.id);
         const idxB = customOrder.indexOf(b.id);
-        // If both exist in custom order, sort by index
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        // If only A exists, it goes first
         if (idxA !== -1) return -1;
-        // If only B exists, it goes first
         if (idxB !== -1) return 1;
-        // Otherwise default sort
-        return 0; 
+        return 0;
       });
+    } else {
+        // Default Sort by Time
+        events.sort((a, b) => (a.time || '23:59').localeCompare(b.time || '23:59'));
     }
-    return rawSelectedDayEvents;
-  }, [rawSelectedDayEvents, customOrder]);
 
-  // --- STYLING LOGIC ---
+    return events;
+  }, [rawSelectedDayEvents, searchTerm, filterType, customOrder]);
 
-  // 1. Property-Based Background Color (Deterministic Hash)
-  const getPropertyBackgroundColor = (address?: string) => {
-    if (!address || address === 'General Appointment') return 'bg-white';
+  // Group events by property for 'Property View'
+  const groupedEvents = useMemo(() => {
+    if (viewMode !== 'property') return null;
     
-    const colors = [
-      'bg-red-50', 'bg-orange-50', 'bg-amber-50', 'bg-yellow-50', 'bg-lime-50',
-      'bg-green-50', 'bg-emerald-50', 'bg-teal-50', 'bg-cyan-50', 'bg-sky-50',
-      'bg-blue-50', 'bg-indigo-50', 'bg-violet-50', 'bg-purple-50', 'bg-fuchsia-50',
-      'bg-pink-50', 'bg-rose-50', 'bg-slate-100', 'bg-gray-100'
-    ];
-    
-    let hash = 0;
-    for (let i = 0; i < address.length; i++) {
-      hash = address.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
-
-  // 2. Event Type Text & Border Color (Fixed for consistency)
-  const getEventTypeStyles = (type: CalendarEvent['type']) => {
-    switch (type) {
-      case 'Inspection': return 'text-indigo-800 border-indigo-500';
-      case 'Legal': return 'text-rose-800 border-rose-500';
-      case 'Lease': return 'text-emerald-800 border-emerald-500';
-      case 'Maintenance': return 'text-amber-800 border-amber-500';
-      case 'Viewing': return 'text-sky-800 border-sky-500';
-      default: return 'text-slate-800 border-slate-400';
-    }
-  };
-
-  // 3. Badge Style for Agenda View (Keep distinct)
-  const getEventTypeBadgeColor = (type: CalendarEvent['type']) => {
-    switch (type) {
-      case 'Inspection': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-      case 'Legal': return 'bg-rose-100 text-rose-700 border-rose-200';
-      case 'Lease': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'Maintenance': return 'bg-amber-100 text-amber-700 border-amber-200';
-      case 'Viewing': return 'bg-sky-100 text-sky-700 border-sky-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
-    }
-  };
+    const groups: { [address: string]: CalendarEvent[] } = {};
+    filteredEvents.forEach(ev => {
+        const key = ev.propertyAddress || 'General / Office';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(ev);
+    });
+    return groups;
+  }, [filteredEvents, viewMode]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 animate-in fade-in duration-500 pb-12 items-start h-full">
@@ -339,70 +432,129 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       <div className="w-full lg:w-[400px] flex flex-col space-y-6 shrink-0">
         
         {/* Selected Date Agenda (NOW CONTAINS AI ASSISTANT) */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 flex flex-col min-h-[400px]">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-4xl font-black text-slate-900">{selectedDate.getDate()}</h3>
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedDate.toLocaleString('default', { month: 'long', weekday: 'long' })}</p>
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col min-h-[600px] overflow-hidden">
+          
+          <div className="p-8 border-b border-slate-100 pb-4">
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                <h3 className="text-3xl font-black text-slate-900">{selectedDate.getDate()}</h3>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedDate.toLocaleString('default', { month: 'long', weekday: 'long' })}</p>
+                </div>
+                <button 
+                onClick={() => setIsModalOpen(true)}
+                className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-indigo-600 transition-all active:scale-95 group"
+                >
+                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </button>
             </div>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="p-4 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-indigo-600 transition-all active:scale-95 group"
-            >
-              <svg className="w-6 h-6 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            </button>
+
+            {/* AI ASSISTANT EMBEDDED HERE */}
+            <div className="mb-4">
+                <ScheduleAssistant 
+                currentDate={selectedDate}
+                dayEvents={filteredEvents}
+                allHistoryEvents={allEvents}
+                onAddEvent={onAddEvent}
+                onReorderEvents={setCustomOrder}
+                suggestTask={activeAiTask}
+                />
+            </div>
+
+            {/* --- NEW: Advanced Search & Filter Controls --- */}
+            <div className="space-y-3">
+                {/* Search Bar */}
+                <div className="relative">
+                    <input 
+                        type="text" 
+                        placeholder="Filter by address or task..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400"
+                    />
+                    <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
+
+                <div className="flex justify-between items-center">
+                    {/* Filter Tabs */}
+                    <div className="flex gap-1 overflow-x-auto no-scrollbar">
+                        {(['All', 'Inspection', 'Maintenance', 'Viewing'] as const).map(type => {
+                            const count = rawSelectedDayEvents.filter(e => type === 'All' ? true : e.type === type).length;
+                            if (type !== 'All' && count === 0) return null; // Hide empty categories to save space
+                            
+                            return (
+                                <button
+                                    key={type}
+                                    onClick={() => setFilterType(type)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
+                                        filterType === type 
+                                        ? 'bg-slate-800 text-white border-slate-800' 
+                                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    {type} <span className="opacity-60 ml-0.5">({count})</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {/* View Mode Toggle */}
+                    <button 
+                        onClick={() => setViewMode(viewMode === 'time' ? 'property' : 'time')}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors ml-2 shrink-0"
+                        title={viewMode === 'time' ? "Switch to Property Grouping" : "Switch to Time Line"}
+                    >
+                        {viewMode === 'time' ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        )}
+                    </button>
+                </div>
+            </div>
           </div>
 
-          {/* AI ASSISTANT EMBEDDED HERE */}
-          <div className="mb-6">
-            <ScheduleAssistant 
-              currentDate={selectedDate}
-              dayEvents={selectedDayEvents}
-              allHistoryEvents={allEvents}
-              onAddEvent={onAddEvent}
-              onReorderEvents={setCustomOrder}
-              suggestTask={activeAiTask}
-            />
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-            {selectedDayEvents.length === 0 ? (
-              <div className="text-center py-12 flex flex-col items-center border-t border-slate-100 mt-4">
-                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+          <div className="flex-1 overflow-y-auto p-8 space-y-4 bg-slate-50/50">
+            {filteredEvents.length === 0 ? (
+              <div className="text-center py-12 flex flex-col items-center">
+                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-4">
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 </div>
-                <p className="text-slate-900 font-bold">No Events</p>
-                <p className="text-slate-400 text-xs mt-1">Free day! No appointments scheduled.</p>
+                <p className="text-slate-900 font-bold">No Events Found</p>
+                <p className="text-slate-400 text-xs mt-1">Try adjusting filters or select another day.</p>
                 <button onClick={() => setIsModalOpen(true)} className="mt-4 text-indigo-600 text-xs font-black uppercase tracking-widest hover:underline">Add Event</button>
               </div>
             ) : (
-              selectedDayEvents.map(ev => (
-                <div key={ev.id} className="group relative p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all duration-300">
-                   <div className="flex justify-between items-start mb-2">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeBadgeColor(ev.type)}`}>
-                        {ev.type}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => setActiveAiTask(ev)} 
-                          className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
-                          title="Get AI Suggestions"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                          AI Suggest
-                        </button>
-                        <span className="text-xs font-bold text-slate-900">{ev.time}</span>
-                      </div>
-                   </div>
-                   <h4 className="font-bold text-slate-900">{ev.title}</h4>
-                   <p className="text-xs text-slate-500 mt-1">{ev.propertyAddress}</p>
-                   {ev.description && (
-                     <div className="mt-3 pt-3 border-t border-slate-200/50">
-                       <p className="text-xs text-slate-600 leading-relaxed">{ev.description}</p>
-                     </div>
-                   )}
-                </div>
-              ))
+                viewMode === 'time' ? (
+                    // Standard Chronological List
+                    filteredEvents.map(ev => (
+                      <EventCard 
+                        key={ev.id} 
+                        ev={ev} 
+                        onDraftNotice={handleDraftNotice}
+                        onAiSuggest={(e) => setActiveAiTask(e)}
+                      />
+                    ))
+                ) : (
+                    // Grouped By Property (Collapsible/Sectioned)
+                    Object.entries((groupedEvents || {}) as Record<string, CalendarEvent[]>).map(([address, events]) => (
+                        <div key={address} className="mb-6 last:mb-0">
+                            <div className="sticky top-0 z-10 bg-slate-100/90 backdrop-blur py-2 px-3 rounded-lg mb-3 border border-slate-200 flex justify-between items-center">
+                                <h5 className="text-xs font-black text-slate-700 truncate max-w-[200px]">{address}</h5>
+                                <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">{events.length} Tasks</span>
+                            </div>
+                            <div className="space-y-3 pl-2 border-l-2 border-slate-200">
+                                {events.map(ev => (
+                                  <EventCard 
+                                    key={ev.id} 
+                                    ev={ev}
+                                    onDraftNotice={handleDraftNotice}
+                                    onAiSuggest={(e) => setActiveAiTask(e)}
+                                  />
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                )
             )}
           </div>
         </div>
