@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Property, Transaction } from '../types';
 import { parseBankStatement } from '../services/geminiService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TrustAccountingProps {
   properties: Property[];
@@ -26,6 +27,7 @@ interface BankLine {
 }
 
 const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transactions, onAddTransaction }) => {
+  const { verifyPassword } = useAuth();
   const [activeView, setActiveView] = useState<'cashbook' | 'reconciliation' | 'bank-feed'>('cashbook');
   
   // Bank Feed State
@@ -37,6 +39,13 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
 
   // Agency/Trust Config State
   const [trustConfig, setTrustConfig] = useState({ bank: 'Not Configured', bsb: '', acc: '' });
+
+  // Reconciliation Lock State
+  const [manualBankBalance, setManualBankBalance] = useState<number | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState('');
+  const [unlockError, setUnlockError] = useState('');
 
   // Expense (Payment) Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -66,7 +75,7 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
   const [eomDate, setEomDate] = useState(new Date().toISOString().split('T')[0]);
   const [auditReport, setAuditReport] = useState<string | null>(null);
 
-  // Initialize Mock Bank Feed Data & Load Trust Config
+  // Initialize Mock Data & Load Config
   useEffect(() => {
     if (bankLines.length === 0) {
       setBankLines([
@@ -85,6 +94,12 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
           acc: parsed.trustAccount || ''
        });
     }
+
+    // Load Manual Balance
+    const savedBalance = localStorage.getItem('proptrust_manual_bank_balance');
+    if (savedBalance) {
+        setManualBankBalance(parseFloat(savedBalance));
+    }
   }, []);
 
   // --- Calculations ---
@@ -95,7 +110,6 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
   const cashbookBalance = totalReceipts - totalPayments;
 
   // 2. Ledger Balance (Sum of all property balances)
-  // In a perfect system, Cashbook Balance === Sum of Ledgers
   const ledgersSum = properties.reduce((acc, prop) => {
       const propTxs = trustTxs.filter(t => t.description.includes(prop.address) || t.propertyId === prop.id);
       const credits = propTxs.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amount, 0);
@@ -103,10 +117,40 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
       return acc + (credits - debits);
   }, 0);
 
-  // 3. Bank Balance (Simulated to match for demo purposes)
-  const bankBalance = cashbookBalance; 
+  // 3. Bank Balance Logic: Use manual if set, otherwise default to cashbook for demo
+  // Note: We use 0 as default fallback if manual is cleared, or cashbook if never set
+  const bankBalance = manualBankBalance !== null ? manualBankBalance : cashbookBalance;
 
-  const isBalanced = Math.abs(cashbookBalance - ledgersSum) < 0.01;
+  const isBalanced = Math.abs(cashbookBalance - ledgersSum) < 0.01 && Math.abs(bankBalance - cashbookBalance) < 0.01;
+
+  // --- Unlock Logic ---
+  const handleUnlockClick = () => {
+      setUnlockError('');
+      setUnlockPassword('');
+      setShowUnlockModal(true);
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const isValid = await verifyPassword(unlockPassword);
+      if (isValid) {
+          setIsUnlocked(true);
+          setShowUnlockModal(false);
+          // If no manual balance set yet, default to current cashbook to start editing from a sane value
+          if (manualBankBalance === null) {
+              setManualBankBalance(cashbookBalance);
+          }
+      } else {
+          setUnlockError('Incorrect password. Access denied.');
+      }
+  };
+
+  const handleSaveAndLock = () => {
+      setIsUnlocked(false);
+      if (manualBankBalance !== null) {
+          localStorage.setItem('proptrust_manual_bank_balance', manualBankBalance.toString());
+      }
+  };
 
   // --- Bank Feed Logic ---
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -468,7 +512,6 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                   </div>
                   <div>
                     <h2 className="text-xl font-black tracking-tight">Trust Reconciliation</h2>
-                    {/* NEW: Displays the linked bank account */}
                     <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest mt-0.5">
                        Linked: {trustConfig.bank} •••• {trustConfig.acc.slice(-4)}
                     </p>
@@ -495,9 +538,41 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                <div className="hidden md:block absolute top-1/2 left-[30%] w-[10%] h-[2px] bg-indigo-500/30"></div>
                <div className="hidden md:block absolute top-1/2 right-[30%] w-[10%] h-[2px] bg-indigo-500/30"></div>
 
-               <div>
-                  <p className="text-[10px] font-black uppercase text-indigo-300 tracking-widest mb-2">Bank Statement</p>
-                  <h3 className="text-3xl font-black">${bankBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+               <div className="relative group">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                      <p className="text-[10px] font-black uppercase text-indigo-300 tracking-widest">Bank Statement</p>
+                      {/* LOCK BUTTON */}
+                      {isUnlocked ? (
+                          <button 
+                            onClick={handleSaveAndLock}
+                            className="bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white p-1 rounded transition-colors"
+                            title="Save & Lock"
+                          >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
+                          </button>
+                      ) : (
+                          <button 
+                            onClick={handleUnlockClick}
+                            className="text-slate-500 hover:text-indigo-400 transition-colors"
+                            title="Unlock to Edit (Password Required)"
+                          >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                          </button>
+                      )}
+                  </div>
+                  
+                  {isUnlocked ? (
+                      <input 
+                        type="number"
+                        step="0.01"
+                        value={manualBankBalance ?? ''}
+                        onChange={(e) => setManualBankBalance(parseFloat(e.target.value) || 0)}
+                        className="text-3xl font-black bg-white/10 text-white text-center w-full rounded-lg border border-indigo-500/50 outline-none focus:ring-2 focus:ring-indigo-500 py-1"
+                        autoFocus
+                      />
+                  ) : (
+                      <h3 className="text-3xl font-black">${bankBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                  )}
                </div>
                <div>
                   <p className="text-[10px] font-black uppercase text-indigo-300 tracking-widest mb-2">Cashbook Balance</p>
@@ -782,6 +857,37 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
             </form>
           </div>
         </div>
+      )}
+
+      {/* Unlock Balance Modal */}
+      {showUnlockModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md animate-in fade-in" onClick={() => setShowUnlockModal(false)} />
+              <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 text-center animate-in zoom-in-95">
+                  <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Security Verification</h3>
+                  <p className="text-sm text-slate-500 mb-6">Enter your agency password to manually edit the Trust Bank Balance.</p>
+                  
+                  <form onSubmit={handlePasswordSubmit}>
+                      <input 
+                          type="password" 
+                          autoFocus
+                          placeholder="Password" 
+                          value={unlockPassword}
+                          onChange={(e) => setUnlockPassword(e.target.value)}
+                          className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 font-bold mb-4 text-center"
+                      />
+                      {unlockError && <p className="text-xs text-rose-500 font-bold mb-4">{unlockError}</p>}
+                      
+                      <div className="flex gap-3">
+                          <button type="button" onClick={() => setShowUnlockModal(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50">Cancel</button>
+                          <button type="submit" disabled={!unlockPassword} className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-600 shadow-xl shadow-amber-200 disabled:opacity-50">Unlock</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
       )}
 
       {/* End of Month Audit Wizard */}

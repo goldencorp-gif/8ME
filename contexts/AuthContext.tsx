@@ -13,6 +13,7 @@ interface AuthContextType {
   updateProfile: (p: UserProfile) => void;
   registerLocalUser: (name: string, email: string, passwordPlain: string) => Promise<void>;
   resetLocalUserPassword: (email: string) => Promise<void>;
+  verifyPassword: (password: string) => Promise<boolean>;
   localUserCount: number; // Used to trigger Setup Mode if 0
 }
 
@@ -107,6 +108,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Auto Login
       finishLogin({ name, email, title: 'Agency Admin', phone: '', plan: 'Trial' }, 'Admin');
+  };
+
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    if (!user || !user.email) return false;
+    const email = user.email;
+
+    // 1. Master Override
+    if (email.toLowerCase() === MASTER_CREDENTIALS.email.toLowerCase()) {
+        return password === MASTER_CREDENTIALS.password;
+    }
+
+    // 2. Central Registry
+    const centralAgency = await db.centralRegistry.getAgencyByEmail(email);
+    if (centralAgency && centralAgency.passwordHash) {
+         const inputHash = await hashPassword(password);
+         return inputHash === centralAgency.passwordHash;
+    }
+
+    // 3. Local Auth
+    const credentials = JSON.parse(localStorage.getItem('proptrust_local_auth') || '{}');
+    const storedHash = credentials[email.toLowerCase()];
+    if (storedHash) {
+        const inputHash = await hashPassword(password);
+        return inputHash === storedHash;
+    }
+
+    return false;
   };
 
   const login = async (email: string, password?: string): Promise<{ success: boolean; error?: string }> => {
@@ -246,7 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, role, isLoading, login, logout, updateProfile, registerLocalUser, resetLocalUserPassword, localUserCount }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, role, isLoading, login, logout, updateProfile, registerLocalUser, resetLocalUserPassword, verifyPassword, localUserCount }}>
       {children}
     </AuthContext.Provider>
   );
