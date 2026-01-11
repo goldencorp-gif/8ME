@@ -30,7 +30,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRequestDemo }
   const TERMS_TEXT = `
 MASTER SUBSCRIPTION AGREEMENT (SAAS)
 
-This Master Subscription Agreement ("Agreement") is entered into by and between 8ME Pty Ltd ("Provider") and the entity or individual agreeing to these terms ("Customer").
+This Master Subscription Agreement ("Agreement") is entered into by and between 8 Miles Estate ("Provider") and the entity or individual agreeing to these terms ("Customer").
 
 1. DEFINITIONS
 "Service" means the 8ME property management software platform.
@@ -71,11 +71,11 @@ PRIVACY POLICY & COPYRIGHT NOTICE
 Last Updated: ${new Date().toLocaleDateString()}
 
 1. COPYRIGHT NOTICE
-© 2024 8ME Pty Ltd. All rights reserved.
-The source code, design, interface, and proprietary algorithms (including the TrustSoft Bridge and AI Integration layers) of the 8ME platform are the exclusive property of 8ME Pty Ltd. Unauthorized reproduction, reverse engineering, or distribution of this software is strictly prohibited.
+© 2024 8 Miles Estate. All rights reserved.
+The source code, design, interface, and proprietary algorithms (including the TrustSoft Bridge and AI Integration layers) of the 8ME platform are the exclusive property of 8 Miles Estate. Unauthorized reproduction, reverse engineering, or distribution of this software is strictly prohibited.
 
 2. PRIVACY POLICY OVERVIEW
-8ME Pty Ltd ("we", "us", "our") respects your privacy. This policy explains how we handle data within the 8ME platform.
+8 Miles Estate ("we", "us", "our") respects your privacy. This policy explains how we handle data within the 8ME platform.
 
 3. DATA SOVEREIGNTY (BYOD)
 Unlike traditional SaaS platforms, 8ME operates on a "Data Sovereignty" model.
@@ -503,7 +503,7 @@ For privacy inquiries, please contact: privacy@8me.com
                     <span className="text-slate-600 text-sm px-2 hidden md:inline">|</span>
                     <span className="text-slate-600 text-xs uppercase tracking-widest font-bold">Agent Operating System</span>
                 </div>
-                <span className="text-slate-700 text-xs font-bold md:ml-4">© {new Date().getFullYear()} 8ME Pty Ltd. All rights reserved.</span>
+                <span className="text-slate-700 text-xs font-bold md:ml-4">© {new Date().getFullYear()} 8 Miles Estate. All rights reserved.</span>
             </div>
             <div className="flex space-x-8 text-xs font-bold text-slate-500 uppercase tracking-widest">
                <button onClick={() => setShowSupportModal(true)} className="hover:text-white transition-colors">Support</button>

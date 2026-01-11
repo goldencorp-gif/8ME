@@ -251,7 +251,7 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
                                 autoFocus
                                 value={messageText}
                                 onChange={(e) => setMessageText(e.target.value)}
-                                className="w-full p-4 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none bg-white"
+                                className="w-full p-4 rounded-xl border border-slate-200 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none bg-white"
                                 placeholder="Type your message here..."
                            />
                            <div className="flex gap-2 mt-4">

@@ -152,11 +152,24 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
     setLoading(true);
     // strip header from base64 if present for API
     const cleanTemplate = templateFile ? templateFile.split(',')[1] : undefined;
-    const data = await parseInvoiceRequest(invDescription, prop.address, invRecipient, invDate, cleanTemplate);
-    setInvoiceData(data);
-    setResult(''); 
-    setCheckResult(null);
-    setLoading(false);
+    
+    try {
+        const data = await parseInvoiceRequest(invDescription, prop.address, invRecipient, invDate, cleanTemplate);
+        
+        // Check if data is valid (simple check)
+        if (data && (data.invoiceNumber || (data.items && data.items.length > 0))) {
+            setInvoiceData(data);
+            setResult(''); 
+            setCheckResult(null);
+        } else {
+            alert("Failed to generate invoice details. Please ensure the description is clear and try again.");
+        }
+    } catch (e) {
+        console.error("Invoice Gen Error:", e);
+        alert("An error occurred while generating the invoice. Please try again.");
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleBackgroundCheck = async () => {
