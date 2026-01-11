@@ -1,0 +1,21 @@
+
+{
+  "short_name": "8ME Agent",
+  "name": "8ME Agency Console",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192.png?text=8ME",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512.png?text=8ME",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a"
+}

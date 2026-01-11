@@ -1,0 +1,8 @@
+{
+  "name": "8ME",
+  "description": "A high-end, AI-powered property management and trust accounting suite combining the best of PropertyMe and TrustSoft with a modern, intuitive interface.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
