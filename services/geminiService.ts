@@ -414,12 +414,58 @@ export const generateEntryNotice = async (tenantName: string, address: string, d
 
 // --- SCHEDULE AI ASSISTANT FUNCTIONS ---
 
+// Text Command Processor
+export const processScheduleTextCommand = async (text: string, contextDate: string, currentSchedule: string = '') => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `You are a Property Management Schedule Assistant.
+      Current Date Context: ${contextDate}.
+      
+      Existing Schedule: 
+      ${currentSchedule}
+      
+      User Input: "${text}"
+      
+      Identify the user's intent. They might want to:
+      1. ADD an event (Inspection, Viewing, Maintenance, Meeting).
+      2. SORT/OPTIMIZE the schedule.
+      3. ASK about history of a property.
+      4. LIST/SHOW the schedule (e.g. "What's on today?").
+
+      Return a JSON object (NO MARKDOWN) with the following structure:
+      {
+        "intent": "ADD_EVENT" | "OPTIMIZE" | "HISTORY" | "LIST_SCHEDULES" | "UNKNOWN",
+        "eventData": { // Only if ADD_EVENT
+           "title": "Short title",
+           "date": "YYYY-MM-DD",
+           "time": "HH:MM", 
+           "type": "Inspection" | "Viewing" | "Maintenance" | "Other",
+           "address": "Full address mentioned or 'General'",
+           "description": "Any extra notes"
+        },
+        "propertyKeywords": "String", // Only if HISTORY, e.g. "123 Ocean"
+        "speechResponse": "String" // A short conversational response to the user's command
+      }`,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+    return JSON.parse(response.text || '{}');
+  } catch (error) {
+    console.error("Text Command Error:", error);
+    return { intent: "UNKNOWN", speechResponse: "Sorry, I had trouble processing that request." };
+  }
+};
+
 export const processScheduleVoiceCommand = async (audioBase64: string, contextDate: string, currentSchedule: string = '') => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+      model: 'gemini-3-flash-preview', // Updated to supported multimodal model
       contents: {
         parts: [
           {
@@ -551,8 +597,14 @@ export const generateTaskSuggestions = async (taskTitle: string, taskType: strin
       Address: ${taskAddress}
       Notes: ${taskDesc}
 
+      CRITICAL: Analyze the address provided (${taskAddress}) to determine the Australian State/Territory jurisdiction (e.g. VIC, NSW, QLD).
+      
       Provide 3 concise, actionable suggestions or steps to prepare for or complete this task effectively. 
-      Focus on practical actions (e.g., keys, notices, specific documents to bring).`
+      
+      IMPORTANT: Ensure any advice regarding notices, entry rights, or timeframes complies with the relevant Residential Tenancies Act for that specific location.
+      For example, if in Victoria, ensure inspection notices align with Victorian law.
+      
+      Focus on practical actions (e.g., specific keys, required forms/notices, safety checks).`
     });
     return response.text;
   } catch (e) {

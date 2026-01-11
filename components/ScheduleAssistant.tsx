@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { CalendarEvent } from '../types';
-import { processScheduleVoiceCommand, optimizeScheduleOrder, generateScheduleTips, summarizePropertyHistory, generateTaskSuggestions } from '../services/geminiService';
+import { processScheduleVoiceCommand, processScheduleTextCommand, optimizeScheduleOrder, generateScheduleTips, summarizePropertyHistory, generateTaskSuggestions } from '../services/geminiService';
 
 interface ScheduleAssistantProps {
   currentDate: Date;
@@ -23,7 +23,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [assistantMessage, setAssistantMessage] = useState<string>('');
-  const [historyQuery, setHistoryQuery] = useState('');
+  const [inputText, setInputText] = useState('');
   const [historyResult, setHistoryResult] = useState('');
   const [scheduleList, setScheduleList] = useState<CalendarEvent[] | null>(null);
   
@@ -40,7 +40,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     } else if (!suggestTask) {
       setAssistantMessage("Day is clear. I'm ready to help organize your schedule.");
     }
-  }, [dayEvents]); // Removed suggestTask from dependency to avoid overwriting suggestion immediately unless events change
+  }, [dayEvents]);
 
   // Effect to handle Task Suggestion
   useEffect(() => {
@@ -53,7 +53,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
         suggestTask.description || '', 
         suggestTask.propertyAddress || ''
       ).then(text => {
-         setAssistantMessage(`${text}`); // Removed prefix to be cleaner
+         setAssistantMessage(`${text}`);
          setProcessing(false);
       });
     }
@@ -135,12 +135,13 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
       setIsRecording(true);
     } catch (err: any) {
       console.error("Error accessing microphone:", err);
+      // Improved Error Handling for UI
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setAssistantMessage("Microphone blocked. Please allow access in your browser address bar.");
+        setAssistantMessage("Mic Access Denied: Please allow microphone permissions in your browser settings (lock icon in address bar) to use voice commands.");
       } else if (err.message === "Browser API not supported") {
         setAssistantMessage("Microphone not supported in this browser context.");
       } else {
-        setAssistantMessage("Could not access microphone. Please check device settings.");
+        setAssistantMessage("Could not access microphone. Please check system settings.");
       }
     }
   };
@@ -150,6 +151,23 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
+  };
+
+  const handleTextSubmit = async () => {
+    if (!inputText.trim()) return;
+    
+    setProcessing(true);
+    const scheduleContext = dayEvents.map(e => `${e.time} - ${e.title} (${e.propertyAddress})`).join('\n');
+    
+    const result = await processScheduleTextCommand(
+        inputText,
+        currentDate.toISOString().split('T')[0],
+        scheduleContext
+    );
+    
+    handleVoiceResult(result); // Re-use the same handler for result processing
+    setProcessing(false);
+    setInputText('');
   };
 
   const checkConflict = (time: string): boolean => {
@@ -177,7 +195,6 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
       
       if (isConflict) {
         setAssistantMessage(`⚠️ Conflict detected at ${result.eventData.time}. Please suggest an alternate time.`);
-        // Play a small error sound or vibration if on mobile could be added here
       } else {
         const evt: CalendarEvent = {
           id: `voice-${Date.now()}`,
@@ -198,10 +215,9 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     } else if (result.intent === 'OPTIMIZE') {
       handleOptimize();
     } else if (result.intent === 'HISTORY') {
-      setHistoryQuery(result.propertyKeywords || '');
+      setInputText(result.propertyKeywords || '');
       handleLookupHistory(result.propertyKeywords);
     } else if (result.intent === 'UNKNOWN') {
-      // Fallback message already set via speechResponse usually, but ensure fallback
       if (!result.speechResponse) setAssistantMessage("Sorry, I didn't quite catch that.");
     }
   };
@@ -216,7 +232,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   };
 
   const handleLookupHistory = async (query?: string) => {
-    const q = query || historyQuery;
+    const q = query || inputText;
     if (!q) return;
     setProcessing(true);
     const summary = await summarizePropertyHistory(q, allHistoryEvents);
@@ -309,19 +325,20 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
              </button>
         </div>
 
-        {/* History Lookup */}
-        {/* Only show if expanded or specifically asked, to save space. For now, keep simple. */}
+        {/* Text Input / History Lookup */}
         <div className="relative">
             <input 
             type="text" 
-            placeholder="Ask history for address..."
-            value={historyQuery}
-            onChange={(e) => setHistoryQuery(e.target.value)}
+            placeholder="Ask AI (e.g. 'Add inspection at 10am', 'Show history')..."
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
             className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
             />
             <button 
-            onClick={() => handleLookupHistory()}
-            className="absolute right-1 top-1 p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200"
+            onClick={handleTextSubmit}
+            disabled={processing || !inputText}
+            className="absolute right-1 top-1 p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 disabled:opacity-50"
             >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </button>
