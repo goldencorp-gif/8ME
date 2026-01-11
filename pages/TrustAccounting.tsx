@@ -544,7 +544,8 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                       {/* LOCK BUTTON */}
                       {isUnlocked ? (
                           <button 
-                            onClick={handleSaveAndLock}
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); handleSaveAndLock(); }}
                             className="bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white p-1 rounded transition-colors"
                             title="Save & Lock"
                           >
@@ -552,8 +553,9 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                           </button>
                       ) : (
                           <button 
-                            onClick={handleUnlockClick}
-                            className="text-slate-500 hover:text-indigo-400 transition-colors"
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleUnlockClick(); }}
+                            className="text-slate-500 hover:text-indigo-400 transition-colors relative z-20"
                             title="Unlock to Edit (Password Required)"
                           >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -655,10 +657,16 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                          return (
                            <tr key={tx.id} className="hover:bg-slate-50">
                              <td className="px-6 py-4 text-center">
-                               <div className="group relative">
-                                 <svg className="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
-                                 <div className="hidden group-hover:block absolute left-full top-0 ml-2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">Immutable Record</div>
-                               </div>
+                               {/* Immutable Lock Button (Responsive) */}
+                               <button 
+                                 type="button"
+                                 onClick={() => alert(`Audit Lock: Transaction ${tx.reference} is immutable. Edits must be made via reversal.`)}
+                                 className="group relative focus:outline-none hover:scale-110 transition-transform cursor-pointer"
+                                 title="Immutable Record"
+                               >
+                                 <svg className="w-4 h-4 text-slate-300 group-hover:text-rose-400 transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" /></svg>
+                                 <div className="hidden group-hover:block absolute left-full top-0 ml-2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 shadow-lg">Immutable Record</div>
+                               </button>
                              </td>
                              <td className="px-6 py-4 whitespace-nowrap text-slate-500">{new Date(tx.date).toLocaleDateString()}</td>
                              <td className="px-6 py-4 text-xs">{tx.reference}</td>
