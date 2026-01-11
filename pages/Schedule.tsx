@@ -199,7 +199,40 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
     return rawSelectedDayEvents;
   }, [rawSelectedDayEvents, customOrder]);
 
-  const getEventTypeColor = (type: CalendarEvent['type']) => {
+  // --- STYLING LOGIC ---
+
+  // 1. Property-Based Background Color (Deterministic Hash)
+  const getPropertyBackgroundColor = (address?: string) => {
+    if (!address || address === 'General Appointment') return 'bg-white';
+    
+    const colors = [
+      'bg-red-50', 'bg-orange-50', 'bg-amber-50', 'bg-yellow-50', 'bg-lime-50',
+      'bg-green-50', 'bg-emerald-50', 'bg-teal-50', 'bg-cyan-50', 'bg-sky-50',
+      'bg-blue-50', 'bg-indigo-50', 'bg-violet-50', 'bg-purple-50', 'bg-fuchsia-50',
+      'bg-pink-50', 'bg-rose-50', 'bg-slate-100', 'bg-gray-100'
+    ];
+    
+    let hash = 0;
+    for (let i = 0; i < address.length; i++) {
+      hash = address.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // 2. Event Type Text & Border Color (Fixed for consistency)
+  const getEventTypeStyles = (type: CalendarEvent['type']) => {
+    switch (type) {
+      case 'Inspection': return 'text-indigo-800 border-indigo-500';
+      case 'Legal': return 'text-rose-800 border-rose-500';
+      case 'Lease': return 'text-emerald-800 border-emerald-500';
+      case 'Maintenance': return 'text-amber-800 border-amber-500';
+      case 'Viewing': return 'text-sky-800 border-sky-500';
+      default: return 'text-slate-800 border-slate-400';
+    }
+  };
+
+  // 3. Badge Style for Agenda View (Keep distinct)
+  const getEventTypeBadgeColor = (type: CalendarEvent['type']) => {
     switch (type) {
       case 'Inspection': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       case 'Legal': return 'bg-rose-100 text-rose-700 border-rose-200';
@@ -279,9 +312,13 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                   </span>
                 </div>
                 
-                <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+                <div className="flex-1 flex flex-col gap-1.5 overflow-hidden">
                   {dayEvents.slice(0, 3).map(ev => (
-                    <div key={ev.id} className={`text-[9px] font-bold truncate px-1.5 py-1 rounded-md border-l-2 ${getEventTypeColor(ev.type).replace('bg-', 'bg-opacity-20 ')}`}>
+                    <div 
+                        key={ev.id} 
+                        className={`text-[9px] font-bold truncate px-2 py-1.5 rounded-md border-l-[3px] shadow-sm ${getPropertyBackgroundColor(ev.propertyAddress)} ${getEventTypeStyles(ev.type)}`}
+                        title={`${ev.title} - ${ev.propertyAddress}`}
+                    >
                       {ev.title}
                     </div>
                   ))}
@@ -336,7 +373,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
               selectedDayEvents.map(ev => (
                 <div key={ev.id} className="group relative p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all duration-300">
                    <div className="flex justify-between items-start mb-2">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeColor(ev.type)}`}>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeBadgeColor(ev.type)}`}>
                         {ev.type}
                       </span>
                       <span className="text-xs font-bold text-slate-900">{ev.time}</span>

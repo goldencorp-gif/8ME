@@ -11,7 +11,7 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpdateProfile, users, onUpdateUsers }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'agency' | 'billing' | 'data' | 'subscription'>('team');
+  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'agency' | 'billing' | 'data' | 'subscription' | 'permissions'>('team');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -70,6 +70,9 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
   });
   const [liabilityAccepted, setLiabilityAccepted] = useState(false);
 
+  // Permissions State
+  const [micEnabled, setMicEnabled] = useState<boolean>(true);
+
   useEffect(() => {
     // Load settings from local storage
     const savedAgency = localStorage.getItem('proptrust_agency_settings');
@@ -88,6 +91,11 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
         // If they are already enabled, assume they accepted previously
         if (parsed.enabled) setLiabilityAccepted(true);
     }
+
+    // Load Permissions
+    const savedMic = localStorage.getItem('8me_mic_enabled');
+    // Default to true if not set, or parse value
+    setMicEnabled(savedMic !== 'false');
 
     // Load Stripe Config
     getStripeConfig().then(setStripeConfig);
@@ -125,6 +133,7 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
       localStorage.setItem('proptrust_partner_settings', JSON.stringify(partners));
       localStorage.setItem('proptrust_service_config', JSON.stringify(services));
       localStorage.setItem('proptrust_cloud_config', JSON.stringify(cloudConfig));
+      localStorage.setItem('8me_mic_enabled', String(micEnabled));
       
       // Force reload if data source changed to ensure DB service picks it up
       if (activeTab === 'data') {
@@ -262,6 +271,13 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
             <span>Revenue & Services</span>
             {activeTab === 'billing' && <div className="w-2 h-2 bg-white rounded-full" />}
           </button>
+          <button 
+            onClick={() => setActiveTab('permissions')}
+            className={`w-full text-left px-5 py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-between ${activeTab === 'permissions' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+          >
+            <span>Device Permissions</span>
+            {activeTab === 'permissions' && <div className="w-2 h-2 bg-white rounded-full" />}
+          </button>
           <div className="pt-4 border-t border-slate-200 mt-4">
             <button 
                 onClick={() => setActiveTab('data')}
@@ -385,6 +401,49 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
                         </div>
                     </div>
                 </div>
+            </div>
+          )}
+
+          {/* Permissions Tab */}
+          {activeTab === 'permissions' && (
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8 animate-in fade-in">
+              <div className="flex items-center space-x-4 border-b border-slate-100 pb-6">
+                <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Device Permissions</h3>
+                  <p className="text-sm text-slate-500">Manage how 8ME interacts with your device hardware.</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                 <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <h4 className="font-bold text-slate-900">Microphone Access</h4>
+                        <p className="text-xs text-slate-500 mt-1">Allows the AI Assistant to listen to voice commands and take dictation.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer" 
+                          checked={micEnabled}
+                          onChange={(e) => setMicEnabled(e.target.checked)}
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                 </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                 <button 
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                 >
+                   {loading ? 'Saving...' : 'Update Permissions'}
+                 </button>
+              </div>
             </div>
           )}
 

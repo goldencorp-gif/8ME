@@ -414,7 +414,7 @@ export const generateEntryNotice = async (tenantName: string, address: string, d
 
 // --- SCHEDULE AI ASSISTANT FUNCTIONS ---
 
-export const processScheduleVoiceCommand = async (audioBase64: string, contextDate: string) => {
+export const processScheduleVoiceCommand = async (audioBase64: string, contextDate: string, currentSchedule: string = '') => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -432,14 +432,18 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
             text: `You are a Property Management Schedule Assistant. Listen to the command.
             Current Date Context: ${contextDate}.
             
+            Existing Schedule: 
+            ${currentSchedule}
+            
             Identify the user's intent. They might want to:
             1. ADD an event (Inspection, Viewing, Maintenance, Meeting).
             2. SORT/OPTIMIZE the schedule.
             3. ASK about history of a property.
+            4. LIST/SHOW the schedule (e.g. "What's on today?").
 
             Return a JSON object (NO MARKDOWN) with the following structure:
             {
-              "intent": "ADD_EVENT" | "OPTIMIZE" | "HISTORY" | "UNKNOWN",
+              "intent": "ADD_EVENT" | "OPTIMIZE" | "HISTORY" | "LIST_SCHEDULES" | "UNKNOWN",
               "eventData": { // Only if ADD_EVENT
                  "title": "Short title",
                  "date": "YYYY-MM-DD",
@@ -448,7 +452,8 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
                  "address": "Full address mentioned or 'General'",
                  "description": "Any extra notes"
               },
-              "propertyKeywords": "String" // Only if HISTORY, e.g. "123 Ocean"
+              "propertyKeywords": "String", // Only if HISTORY, e.g. "123 Ocean"
+              "speechResponse": "String" // A short conversational response to the user's command
             }`
           }
         ]
@@ -460,7 +465,7 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
     return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Voice Command Error:", error);
-    return { intent: "UNKNOWN" };
+    return { intent: "UNKNOWN", speechResponse: "Sorry, I had trouble processing that audio." };
   }
 };
 

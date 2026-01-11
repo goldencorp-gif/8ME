@@ -387,7 +387,7 @@ const App: React.FC = () => {
                 {activeTab === 'master-console' ? 'System Admin' : activeTab}
             </div>
           </div>
-          <button onClick={() => setActiveTab('ai-assistant')} className="px-4 md:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 font-bold text-sm flex items-center space-x-2">
+          <button onClick={() => setActiveTab('schedule')} className="px-4 md:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 font-bold text-sm flex items-center space-x-2">
             <div className="w-5 h-5 bg-white/20 rounded-lg flex items-center justify-center text-[10px]">AI</div>
             <span className="hidden md:inline">Assistant</span>
           </button>
