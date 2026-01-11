@@ -240,6 +240,26 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     setProcessing(false);
   };
 
+  const handleDownloadList = () => {
+    if (!scheduleList || scheduleList.length === 0) return;
+
+    const headers = "Time,Title,Type,Address,Description\n";
+    const rows = scheduleList.map(evt => {
+      const clean = (str?: string) => `"${(str || '').replace(/"/g, '""')}"`;
+      return `${clean(evt.time)},${clean(evt.title)},${clean(evt.type)},${clean(evt.propertyAddress)},${clean(evt.description)}`;
+    }).join("\n");
+
+    const blob = new Blob([headers + rows], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Schedule_Export_${currentDate.toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="bg-gradient-to-b from-indigo-50 to-white rounded-2xl border border-indigo-100 shadow-sm overflow-hidden flex flex-col mb-4">
       <div className="p-4 bg-indigo-600 text-white flex items-center justify-between">
@@ -291,7 +311,19 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
         {/* Schedule List (Visible when asked) */}
         {scheduleList && (
           <div className="space-y-2">
-             <h4 className="text-xs font-black uppercase text-indigo-900 tracking-widest mb-2">Today's Agenda</h4>
+             <div className="flex justify-between items-center mb-1">
+                <h4 className="text-xs font-black uppercase text-indigo-900 tracking-widest">Today's Agenda</h4>
+                {scheduleList.length > 0 && (
+                  <button 
+                    onClick={handleDownloadList}
+                    className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-white px-2 py-1 rounded-md border border-indigo-100 shadow-sm"
+                    title="Download as CSV"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Export
+                  </button>
+                )}
+             </div>
              <div className="bg-white border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto">
                {scheduleList.length === 0 ? (
                  <p className="text-xs text-slate-400 text-center py-4">No events found.</p>

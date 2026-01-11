@@ -10,6 +10,7 @@ interface ScheduleProps {
   manualEvents: CalendarEvent[];
   onAddEvent: (event: CalendarEvent) => void;
   onRecordHistory?: (record: any) => void;
+  onDeleteEvent: (id: string) => void;
 }
 
 // --- STYLING LOGIC (Moved outside component) ---
@@ -60,10 +61,11 @@ interface EventCardProps {
   ev: CalendarEvent;
   onDraftNotice: (ev: CalendarEvent) => void;
   onAiSuggest: (ev: CalendarEvent) => void;
+  onDelete: (ev: CalendarEvent) => void;
 }
 
 // Helper component for rendering a single event card
-const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest }) => (
+const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, onDelete }) => (
   <div className="group relative p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all duration-300">
       <div className="flex justify-between items-start mb-2">
           <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeBadgeColor(ev.type)}`}>
@@ -87,6 +89,18 @@ const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest })
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               AI Suggest
           </button>
+          
+          {/* Delete Button - Only for manual events */}
+          {!ev.id.startsWith('auto-') && (
+            <button
+                onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
+                className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-md transition-colors"
+                title="Delete Event"
+            >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          )}
+
           <span className="text-xs font-bold text-slate-900">{ev.time}</span>
           </div>
       </div>
@@ -100,7 +114,7 @@ const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest })
   </div>
 );
 
-const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks = [], manualEvents, onAddEvent, onRecordHistory }) => {
+const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks = [], manualEvents, onAddEvent, onRecordHistory, onDeleteEvent }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,6 +136,9 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   // AI Suggestion State
   const [activeAiTask, setActiveAiTask] = useState<CalendarEvent | null>(null);
   
+  // Delete Modal State
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+
   // New Event Form State
   const [newEvent, setNewEvent] = useState<{
     title: string;
@@ -532,6 +549,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                         ev={ev} 
                         onDraftNotice={handleDraftNotice}
                         onAiSuggest={(e) => setActiveAiTask(e)}
+                        onDelete={(e) => setEventToDelete(e)}
                       />
                     ))
                 ) : (
@@ -549,6 +567,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                                     ev={ev}
                                     onDraftNotice={handleDraftNotice}
                                     onAiSuggest={(e) => setActiveAiTask(e)}
+                                    onDelete={(e) => setEventToDelete(e)}
                                   />
                                 ))}
                             </div>
@@ -703,6 +722,24 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                </>
              )}
           </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {eventToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md animate-in fade-in" onClick={() => setEventToDelete(null)} />
+            <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 text-center animate-in zoom-in-95">
+                <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Event?</h3>
+                <p className="text-sm text-slate-500 mb-8">Are you sure you want to delete <span className="font-bold text-slate-900">"{eventToDelete.title}"</span>?</p>
+                <div className="flex gap-3">
+                    <button onClick={() => setEventToDelete(null)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50">Cancel</button>
+                    <button onClick={() => { onDeleteEvent(eventToDelete.id); setEventToDelete(null); }} className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-700 shadow-xl shadow-rose-200">Delete</button>
+                </div>
+            </div>
         </div>
       )}
     </div>

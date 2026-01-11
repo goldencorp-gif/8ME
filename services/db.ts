@@ -125,6 +125,10 @@ export const db = {
       const list = await dbRead<CalendarEvent[]>('calendar', []);
       await dbWrite('calendar', [...list, event]);
     },
+    delete: async (id: string) => {
+      const list = await dbRead<CalendarEvent[]>('calendar', []);
+      await dbWrite('calendar', list.filter(e => e.id !== id));
+    },
     deleteForProperty: async (address: string) => {
       const list = await dbRead<CalendarEvent[]>('calendar', []);
       await dbWrite('calendar', list.filter(e => e.propertyAddress !== address));

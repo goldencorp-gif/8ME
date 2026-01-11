@@ -237,6 +237,17 @@ const App: React.FC = () => {
     showToast('Calendar updated');
   };
 
+  const handleDeleteCalendarEvent = async (eventId: string) => {
+    // Only manual events (id starting with 'evt-' or 'voice-') are stored in db.calendar
+    if (eventId.startsWith('evt-') || eventId.startsWith('voice-')) {
+       await db.calendar.delete(eventId);
+       setCalendarEvents(prev => prev.filter(e => e.id !== eventId));
+       showToast('Event removed from calendar');
+    } else {
+       showToast('Cannot delete automated system events', 'error');
+    }
+  };
+
   const handleEditProperty = (prop: Property) => {
     setPropertyToEdit(prop);
     setIsAddModalOpen(true);
@@ -282,7 +293,8 @@ const App: React.FC = () => {
                   properties={properties} 
                   maintenanceTasks={maintenanceTasks} 
                   manualEvents={calendarEvents} 
-                  onAddEvent={handleAddCalendarEvent} 
+                  onAddEvent={handleAddCalendarEvent}
+                  onDeleteEvent={handleDeleteCalendarEvent}
                   onRecordHistory={handleRecordHistory}
                />;
       case 'logbook':

@@ -1,7 +1,20 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// ... existing functions (generatePropertyDescription, etc) ...
+// Helper to handle API Rate Limits (429) with exponential backoff
+const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 3, delay = 1000): Promise<any> => {
+  try {
+    return await ai.models.generateContent(params);
+  } catch (error: any) {
+    const isRateLimit = error?.status === 429 || error?.code === 429 || error?.message?.includes('429') || error?.message?.includes('RESOURCE_EXHAUSTED');
+    if (isRateLimit && retries > 0) {
+      console.warn(`[Gemini] Rate limit hit. Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return generateContentWithRetry(ai, params, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+};
 
 export const generatePropertyDescription = async (address: string, features: string[]) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -419,7 +432,7 @@ export const processScheduleTextCommand = async (text: string, contextDate: stri
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `You are a Property Management Schedule Assistant.
       Current Date Context: ${contextDate}.
@@ -454,8 +467,11 @@ export const processScheduleTextCommand = async (text: string, contextDate: stri
       }
     });
     return JSON.parse(response.text || '{}');
-  } catch (error) {
+  } catch (error: any) {
     console.error("Text Command Error:", error);
+    if (error?.status === 429 || error?.code === 429 || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+        return { intent: "UNKNOWN", speechResponse: "System overload (429). Please try again in a few seconds." };
+    }
     return { intent: "UNKNOWN", speechResponse: "Sorry, I had trouble processing that request." };
   }
 };
@@ -464,7 +480,7 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview', // Updated to supported multimodal model
       contents: {
         parts: [
@@ -509,8 +525,11 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
       }
     });
     return JSON.parse(response.text || '{}');
-  } catch (error) {
+  } catch (error: any) {
     console.error("Voice Command Error:", error);
+    if (error?.status === 429 || error?.code === 429 || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+        return { intent: "UNKNOWN", speechResponse: "High traffic detected. Please wait a moment and try speaking again." };
+    }
     return { intent: "UNKNOWN", speechResponse: "Sorry, I had trouble processing that audio." };
   }
 };
