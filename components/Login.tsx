@@ -197,7 +197,16 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
                 <span className="font-bold text-slate-500">Remember me</span>
               </label>
               {mode === 'login' && (
-                  <button type="button" onClick={() => alert("Please contact the Master Administrator (Support) to reset your local account password.")} className="font-bold text-indigo-600 hover:text-indigo-800">Forgot password?</button>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                        // "Auto-fill the admin email address" -> open mail client with to=help@8me.com
+                        window.location.href = "mailto:help@8me.com?subject=Password Reset Request";
+                    }} 
+                    className="font-bold text-indigo-600 hover:text-indigo-800"
+                  >
+                    Forgot password?
+                  </button>
               )}
             </div>
 

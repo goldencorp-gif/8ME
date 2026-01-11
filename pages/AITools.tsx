@@ -145,7 +145,15 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
   };
 
   const handleGenerateInvoice = async () => {
-    if (!invPropertyId || !invDescription) return;
+    if (!invPropertyId) {
+        alert("Please select a property to generate an invoice for.");
+        return;
+    }
+    if (!invDescription) {
+        alert("Please provide some details for the invoice (e.g., 'Fixing tap $150').");
+        return;
+    }
+    
     const prop = properties.find(p => p.id === invPropertyId);
     if (!prop) return;
 
@@ -468,7 +476,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           
           <button 
             onClick={handleGenerateInvoice}
-            disabled={loading || !invPropertyId || (isCustomTemplate && !templateFile)}
+            disabled={loading || (isCustomTemplate && !templateFile)}
             className="w-full mt-6 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-emerald-200"
           >
             {loading ? 'Processing...' : isCustomTemplate ? 'Fill Custom Form' : 'Draft Invoice'}
