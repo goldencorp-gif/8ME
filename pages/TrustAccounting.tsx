@@ -545,8 +545,8 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                       {isUnlocked ? (
                           <button 
                             type="button"
-                            onClick={(e) => { e.preventDefault(); handleSaveAndLock(); }}
-                            className="bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white p-1 rounded transition-colors"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveAndLock(); }}
+                            className="bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white p-1 rounded transition-colors relative z-20"
                             title="Save & Lock"
                           >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
