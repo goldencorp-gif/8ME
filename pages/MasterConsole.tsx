@@ -159,11 +159,16 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
   };
 
   const handleResetLocalPassword = async (email: string) => {
-      if (confirm(`MASTER OVERRIDE:\n\nAre you sure you want to forcibly reset the password for ${email}?`)) {
+      // Use window.confirm explicitly to avoid namespace collisions and ensure it fires
+      const confirmed = window.confirm(`MASTER OVERRIDE:\n\nAre you sure you want to forcibly reset the password for ${email}?`);
+      
+      if (confirmed) {
           try {
             await resetLocalUserPassword(email);
+            alert(`Password has been reset for ${email} to: reset123`);
           } catch (e) {
-            alert("Unexpected error calling reset function.");
+            alert("Unexpected error calling reset function. Check console.");
+            console.error(e);
           }
       }
   };

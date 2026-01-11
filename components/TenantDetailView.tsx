@@ -12,6 +12,10 @@ interface TenantDetailViewProps {
 const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, onOpenProperty, onUpdateProperty }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'lease' | 'communications'>('overview');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Message State
+  const [isComposing, setIsComposing] = useState(false);
+  const [messageText, setMessageText] = useState('');
 
   // Mock Tenant Documents (filtered from property docs in a real app)
   const tenantDocs = property.documents?.filter(d => 
@@ -41,11 +45,14 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
   };
 
   const handleSendMessage = () => {
-      const msg = prompt(`Send message to ${property.tenantName || 'Tenant'}:`, "Please verify your contact details.");
-      if (msg) {
-          alert(`Message sent via SMS/Email: "${msg}"`);
-          // In a real app, this would add to communication log
+      if (!messageText.trim()) {
+          alert("Please enter a message.");
+          return;
       }
+      alert(`Message sent to ${property.tenantName || 'Tenant'}:\n\n"${messageText}"\n\n(Logged to history)`);
+      setMessageText('');
+      setIsComposing(false);
+      // In a real app, this would add to communication log via onUpdateProperty
   };
 
   return (
@@ -223,18 +230,46 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
 
            {activeTab === 'communications' && (
              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center py-20">
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center py-10">
                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
                       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                    </div>
                    <h3 className="text-xl font-bold text-slate-900">Communication Log</h3>
-                   <p className="text-slate-500 mt-2 max-w-sm mx-auto">This feature tracks SMS, Emails, and Portal messages sent to {property.tenantName}.</p>
-                   <button 
-                        onClick={handleSendMessage}
-                        className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95"
-                   >
-                      Send Message
-                   </button>
+                   <p className="text-slate-500 mt-2 max-w-sm mx-auto mb-6">This feature tracks SMS, Emails, and Portal messages sent to {property.tenantName}.</p>
+                   
+                   {!isComposing ? (
+                       <button 
+                            onClick={() => setIsComposing(true)}
+                            className="mt-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95"
+                       >
+                          Compose Message
+                       </button>
+                   ) : (
+                       <div className="max-w-md mx-auto bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left animate-in fade-in slide-in-from-bottom-2">
+                           <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">New Message</label>
+                           <textarea 
+                                autoFocus
+                                value={messageText}
+                                onChange={(e) => setMessageText(e.target.value)}
+                                className="w-full p-4 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none bg-white"
+                                placeholder="Type your message here..."
+                           />
+                           <div className="flex gap-2 mt-4">
+                               <button 
+                                    onClick={() => setIsComposing(false)}
+                                    className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-50"
+                               >
+                                   Cancel
+                               </button>
+                               <button 
+                                    onClick={handleSendMessage}
+                                    className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-md"
+                               >
+                                   Send Now
+                               </button>
+                           </div>
+                       </div>
+                   )}
                 </div>
              </div>
            )}

@@ -233,13 +233,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Force reset with fallback hash logic
           const tempHash = await hashPassword('reset123');
+          
+          // CRITICAL FIX: Ensure entry exists even if it was missing
           credentials[email.toLowerCase()] = tempHash;
           localStorage.setItem('proptrust_local_auth', JSON.stringify(credentials));
           
-          alert(`Success! Password for ${email} has been reset to: reset123`);
+          console.log("Reset successful for:", email);
       } catch (err) {
           console.error("Reset Password Failed:", err);
-          alert("Error resetting password. Check console for details.");
+          throw new Error("Failed to write to local storage");
       }
   };
 

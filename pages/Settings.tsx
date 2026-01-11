@@ -25,6 +25,20 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
     alert(`Switched to ${plan} plan successfully.`);
   };
 
+  const handleEditUser = (user: UserAccount) => {
+      const newName = prompt("Edit Team Member Name:", user.name);
+      if (newName !== null) {
+          const newRole = prompt("Edit Role (Admin, Manager, Viewer):", user.role);
+          if (newRole) {
+              const updatedUsers = users.map(u => 
+                  u.id === user.id ? { ...u, name: newName, role: newRole as any } : u
+              );
+              onUpdateUsers(updatedUsers);
+              // In real app, sync to DB here
+          }
+      }
+  };
+
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white";
 
   return (
@@ -101,7 +115,12 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                   </div>
                   <div className="flex items-center space-x-4">
                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${u.role === 'Admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>{u.role}</span>
-                    <button className="text-slate-400 hover:text-indigo-600 text-xs font-bold">Edit</button>
+                    <button 
+                        onClick={() => handleEditUser(u)}
+                        className="text-slate-400 hover:text-indigo-600 text-xs font-bold px-3 py-1 hover:bg-slate-50 rounded transition-colors"
+                    >
+                        Edit
+                    </button>
                   </div>
                 </div>
               ))}
