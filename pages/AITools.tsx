@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { generatePropertyDescription, analyzeArrearsMessage, parseInvoiceRequest, generateQuoteRequestEmail, generateBackgroundCheck, generatePrivacyConsent, generateLeaseAppraisal, generateSalesAppraisal, generateProspectingMessage } from '../services/geminiService';
 import { Property, Transaction, PropertyDocument } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // Import Auth
 
 interface AIToolsProps {
   properties?: Property[];
@@ -10,6 +11,8 @@ interface AIToolsProps {
 }
 
 const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, onUpdateProperty }) => {
+  const { user } = useAuth(); // Get user to check plan
+  
   const [address, setAddress] = useState('');
   const [features, setFeatures] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,6 +77,31 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
   const [prospectHook, setProspectHook] = useState('');
 
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400";
+
+  // CHECK PLAN STATUS
+  const isPremium = user?.plan && user.plan !== 'Trial';
+
+  if (!isPremium) {
+      return (
+          <div className="max-w-4xl mx-auto py-24 text-center">
+              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-8 text-slate-400">
+                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <h2 className="text-3xl font-black text-slate-900 mb-4">Demo Restriction</h2>
+              <p className="text-slate-500 max-w-lg mx-auto mb-8">
+                  AI features like Gemini integration, Lease Appraisals, and Legal Drafting are only available in the full version.
+              </p>
+              <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100 inline-block text-left max-w-sm">
+                  <h4 className="font-bold text-indigo-900 mb-2">Activation Steps:</h4>
+                  <ol className="list-decimal list-inside text-sm text-indigo-800 space-y-2">
+                      <li>Purchase a subscription plan.</li>
+                      <li>Receive your credentials from the Master Admin.</li>
+                      <li>Log in with the new credentials to unlock these features instantly.</li>
+                  </ol>
+              </div>
+          </div>
+      );
+  }
 
   const handleGenerateListing = async () => {
     if (!address) return;
@@ -309,6 +337,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
       <div className="text-center">
         <h2 className="text-3xl font-bold text-slate-900">AI Property Assistant</h2>
         <p className="text-slate-500 mt-2">Generate listings, draft communications, and analyze portfolio data with Gemini 3.</p>
+        <span className="inline-block mt-2 px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">{user?.plan} Plan Active</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

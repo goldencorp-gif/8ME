@@ -24,6 +24,7 @@ export interface UserProfile {
   title: string;
   email: string;
   phone: string;
+  plan?: 'Trial' | 'Starter' | 'Growth' | 'Enterprise'; // Added for feature gating
 }
 
 export interface UserAccount {
@@ -31,7 +32,7 @@ export interface UserAccount {
   name: string;
   email: string;
   role: 'Master' | 'Admin' | 'Manager' | 'Viewer';
-  status: 'Active' | 'Suspended';
+  status: 'Active' | 'Suspended' | 'Paused';
   lastActive: string;
 }
 
@@ -39,7 +40,7 @@ export interface Agency {
   id: string;
   name: string;
   contactEmail: string;
-  status: 'Active' | 'Trial' | 'Suspended';
+  status: 'Active' | 'Trial' | 'Suspended' | 'Paused'; // Added Paused
   subscriptionPlan: 'Starter' | 'Growth' | 'Enterprise';
   usersCount: number; 
   licenseLimit: number; 
@@ -49,6 +50,7 @@ export interface Agency {
   termsAcceptedAt?: string; // ISO Date string of when MSA was accepted/signed
   mrr: number;
   websiteUrl?: string; 
+  passwordHash?: string; // Stored securely in central registry
 }
 
 export interface Property {

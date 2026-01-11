@@ -388,7 +388,7 @@ const App: React.FC = () => {
     <>
       {viewState === 'landing' && <LandingPage onLoginClick={() => setViewState('login')} onRequestDemo={() => setViewState('login')} />}
       
-      {viewState === 'login' && <Login />}
+      {viewState === 'login' && <Login onBack={() => setViewState('landing')} />}
 
       {viewState === 'app' && (
         <div className="flex min-h-screen bg-slate-50">

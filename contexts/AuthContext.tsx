@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLocalUserCount(prev => prev + 1);
       
       // Auto Login
-      finishLogin({ name, email, title: 'Agency Admin', phone: '' }, 'Admin');
+      finishLogin({ name, email, title: 'Agency Admin', phone: '', plan: 'Trial' }, 'Admin');
   };
 
   const login = async (email: string, password?: string): Promise<{ success: boolean; error?: string }> => {
@@ -106,7 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 name: MASTER_CREDENTIALS.name,
                 email: MASTER_CREDENTIALS.email,
                 title: 'System Administrator',
-                phone: ''
+                phone: '',
+                plan: 'Enterprise'
             }, 'Master');
             return { success: true };
         } else {
@@ -114,8 +115,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }
 
-    // --- LEVEL 2: LOCAL CLIENT ACCOUNT (Device Specific) ---
-    // Checks against the specific browser's/app's LocalStorage
+    // --- LEVEL 2: CENTRAL REGISTRY CHECK (Payment/Status Validation) ---
+    // Check if the agency exists in the Master's Central Registry first.
+    const centralAgency = await db.centralRegistry.getAgencyByEmail(email);
+    let plan: 'Trial' | 'Starter' | 'Growth' | 'Enterprise' = 'Trial';
+
+    if (centralAgency) {
+        // Enforce Status
+        if (centralAgency.status === 'Suspended') {
+            return { success: false, error: 'Account Suspended. Contact Support.' };
+        }
+        if (centralAgency.status === 'Paused') {
+            return { success: false, error: 'Account Temporarily Paused. Contact Admin.' };
+        }
+        
+        plan = centralAgency.subscriptionPlan;
+
+        // Verify password against central registry if provided there (Master issued credentials)
+        if (centralAgency.passwordHash) {
+             const inputHash = await hashPassword(password || '');
+             if (inputHash !== centralAgency.passwordHash) {
+                 return { success: false, error: 'Invalid credentials.' };
+             }
+             
+             // Login success - Sync central details to local context
+             finishLogin({
+                name: centralAgency.name,
+                email: centralAgency.contactEmail,
+                title: 'Agency Principal',
+                phone: '',
+                plan: centralAgency.subscriptionPlan
+             }, 'Admin');
+             return { success: true };
+        }
+    }
+
+    // --- LEVEL 3: LOCAL DEVICE ACCOUNT (Legacy/Offline Mode) ---
+    // If not in central registry OR central registry doesn't enforce password, check local storage.
     if (!password) return { success: false, error: 'Password required' };
 
     const credentials = JSON.parse(localStorage.getItem('proptrust_local_auth') || '{}');
@@ -135,19 +171,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     name: localUser.name,
                     email: localUser.email,
                     title: 'Agency Admin',
-                    phone: ''
+                    phone: '',
+                    plan: plan // Defaults to Trial if not in central
                 }, localUser.role);
                 return { success: true };
             }
         }
     }
 
-    // FALLBACK DEMO ACCOUNT (Only if manually enabled or specific demo email used)
-    // This ensures the demo experience still works for reviewers who don't want to register.
+    // FALLBACK DEMO ACCOUNT
     if (email === 'alex.manager@8me.com') {
-         // Create this user implicitly if it doesn't exist for demo purposes
-         // But normally we'd fail here.
-         const demoProfile = { name: 'Alex Manager', email, title: 'Demo User', phone: '' };
+         const demoProfile = { name: 'Alex Manager', email, title: 'Demo User', phone: '', plan: 'Trial' as const };
          finishLogin(demoProfile, 'Admin');
          return { success: true };
     }
@@ -180,9 +214,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- MASTER FEATURES ---
   const resetLocalUserPassword = async (email: string) => {
       console.log(`[Master Override] Resetting password for ${email}`);
-      // In a real app, this would send an email. 
-      // In this local-first model, the Master (You) would perform the reset physically on the device.
-      // We simulate this by setting the password to a temp default.
       const credentials = JSON.parse(localStorage.getItem('proptrust_local_auth') || '{}');
       if (credentials[email.toLowerCase()]) {
           const tempHash = await hashPassword('reset123');

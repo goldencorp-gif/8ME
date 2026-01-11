@@ -1,5 +1,5 @@
 
-import { Property, Transaction, MaintenanceTask, CalendarEvent, LogbookEntry, HistoryRecord, UserAccount } from '../types';
+import { Property, Transaction, MaintenanceTask, CalendarEvent, LogbookEntry, HistoryRecord, UserAccount, Agency } from '../types';
 import { MOCK_PROPERTIES, MOCK_TRANSACTIONS, MOCK_MAINTENANCE } from '../constants';
 
 // --- DATA LAYER (BYOD Support) ---
@@ -68,6 +68,30 @@ export const getDbConnectionInfo = () => {
 };
 
 export const db = {
+  // NEW: Central Registry (Simulates the Master Backend for Agency Status)
+  centralRegistry: {
+    listAgencies: async (): Promise<Agency[]> => {
+       const data = localStorage.getItem('proptrust_central_agencies');
+       return data ? JSON.parse(data) : [];
+    },
+    // Used by Master Console to provision access
+    registerAgency: async (agency: Agency, passwordHash: string) => {
+       const agencies = await db.centralRegistry.listAgencies();
+       const newAgency = { ...agency, passwordHash }; // Store hash in central
+       localStorage.setItem('proptrust_central_agencies', JSON.stringify([...agencies, newAgency]));
+    },
+    // Used by AuthContext to check permission to login
+    getAgencyByEmail: async (email: string) => {
+       const agencies = await db.centralRegistry.listAgencies();
+       return agencies.find(a => a.contactEmail.toLowerCase() === email.toLowerCase());
+    },
+    updateStatus: async (email: string, status: Agency['status']) => {
+       const agencies = await db.centralRegistry.listAgencies();
+       const updated = agencies.map(a => a.contactEmail === email ? { ...a, status } : a);
+       localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
+    }
+  },
+
   // NEW: Local User Management
   users: {
     list: () => dbRead<UserAccount[]>('users', []), // Default to empty to trigger setup flow

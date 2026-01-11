@@ -1,8 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { BrandLogo } from './BrandLogo';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  onBack?: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onBack }) => {
   const { login, registerLocalUser, localUserCount } = useAuth();
   
   // View State
@@ -83,13 +88,14 @@ const Login: React.FC = () => {
         
         <div className="relative z-10 p-16 flex flex-col justify-between h-full text-white">
           <div className="flex justify-between items-start">
-            <div className="flex items-center space-x-3">
-              <div className="bg-indigo-600 p-2.5 rounded-xl">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <h1 className="text-xl font-bold tracking-tight">8<span className="text-indigo-400">ME</span></h1>
+            
+            {/* Clickable Brand Logo - Returns to Landing Page */}
+            <div 
+                onClick={onBack} 
+                className={`flex items-center ${onBack ? 'cursor-pointer hover:opacity-80' : ''} transition-opacity`}
+                title="Return to Home"
+            >
+              <BrandLogo variant="header" />
             </div>
           </div>
 
@@ -109,7 +115,21 @@ const Login: React.FC = () => {
       </div>
 
       {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-24 bg-white animate-in slide-in-from-right duration-700">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-24 bg-white animate-in slide-in-from-right duration-700 relative">
+        
+        {/* Back Button - Visible on Mobile and Desktop Form Side */}
+        {onBack && (
+            <button 
+                onClick={onBack}
+                className="absolute top-8 left-8 flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-colors group"
+            >
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Back to Home</span>
+            </button>
+        )}
+
         <div className="w-full max-w-md space-y-8">
           <div>
             {mode === 'setup' ? (
