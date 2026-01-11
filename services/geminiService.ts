@@ -1,6 +1,8 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
+// ... existing functions (generatePropertyDescription, etc) ...
+
 export const generatePropertyDescription = async (address: string, features: string[]) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
@@ -407,5 +409,127 @@ export const generateEntryNotice = async (tenantName: string, address: string, d
     return response.text;
   } catch (error) {
     return "Error generating entry notice.";
+  }
+};
+
+// --- SCHEDULE AI ASSISTANT FUNCTIONS ---
+
+export const processScheduleVoiceCommand = async (audioBase64: string, contextDate: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'audio/mp3',
+              data: audioBase64
+            }
+          },
+          {
+            text: `You are a Property Management Schedule Assistant. Listen to the command.
+            Current Date Context: ${contextDate}.
+            
+            Identify the user's intent. They might want to:
+            1. ADD an event (Inspection, Viewing, Maintenance, Meeting).
+            2. SORT/OPTIMIZE the schedule.
+            3. ASK about history of a property.
+
+            Return a JSON object (NO MARKDOWN) with the following structure:
+            {
+              "intent": "ADD_EVENT" | "OPTIMIZE" | "HISTORY" | "UNKNOWN",
+              "eventData": { // Only if ADD_EVENT
+                 "title": "Short title",
+                 "date": "YYYY-MM-DD",
+                 "time": "HH:MM", 
+                 "type": "Inspection" | "Viewing" | "Maintenance" | "Other",
+                 "address": "Full address mentioned or 'General'",
+                 "description": "Any extra notes"
+              },
+              "propertyKeywords": "String" // Only if HISTORY, e.g. "123 Ocean"
+            }`
+          }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+    return JSON.parse(response.text || '{}');
+  } catch (error) {
+    console.error("Voice Command Error:", error);
+    return { intent: "UNKNOWN" };
+  }
+};
+
+export const optimizeScheduleOrder = async (events: any[]) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `I have a list of property management events for today.
+      Please re-order them to be most efficient.
+      
+      Logic:
+      1. Group geographically close suburbs if possible (guess based on address).
+      2. Prioritize 'Inspection' and 'Leasing' events during business hours (9-5).
+      3. Put 'Maintenance' checks in between.
+      
+      Events List: ${JSON.stringify(events.map(e => ({ id: e.id, title: e.title, time: e.time, address: e.propertyAddress })))}
+      
+      Return ONLY a JSON array of event IDs in the optimized order:
+      ["id_1", "id_2", ...]`,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+    return JSON.parse(response.text || '[]');
+  } catch (error) {
+    console.error("Optimization Error:", error);
+    return [];
+  }
+};
+
+export const generateScheduleTips = async (events: any[]) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Look at this schedule for a property manager: ${JSON.stringify(events.map(e => e.title + ' at ' + e.propertyAddress))}.
+      
+      Give me one short, actionable "Pro Tip" (max 20 words) to help them manage this specific day better. 
+      E.g., "Group your Bondi inspections to save travel time" or "Check keys for 123 Smith St before leaving office".`
+    });
+    return response.text;
+  } catch (error) {
+    return "Review your keys and files before heading out!";
+  }
+};
+
+export const summarizePropertyHistory = async (address: string, events: any[]) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    // Filter events relevant to this address
+    const relevantEvents = events.filter(e => 
+      (e.propertyAddress && e.propertyAddress.toLowerCase().includes(address.toLowerCase())) ||
+      (e.description && e.description.toLowerCase().includes(address.toLowerCase()))
+    );
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Summarize the history of activities for the property at "${address}".
+      Here is the raw event log: ${JSON.stringify(relevantEvents)}.
+      
+      Create a bulleted summary of key actions (Inspections, Maintenance, Leases) in chronological order.
+      If no events found, say "No recent history recorded."`
+    });
+    return response.text;
+  } catch (error) {
+    return "Error generating summary.";
   }
 };

@@ -1,5 +1,14 @@
 
 {
   "footerLogoUrl": "",
-  "headerLogoUrl": ""
+  "headerLogoUrl": "",
+  "stripe": {
+    "starterPriceId": "",
+    "starterLink": "https://buy.stripe.com/test_example1",
+    "growthPriceId": "",
+    "growthLink": "https://buy.stripe.com/test_example2",
+    "enterprisePriceId": "",
+    "enterpriseLink": "https://buy.stripe.com/test_example3",
+    "customerPortalLink": "https://billing.stripe.com/p/login/test_example4"
+  }
 }

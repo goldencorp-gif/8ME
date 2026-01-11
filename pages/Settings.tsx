@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserProfile, UserAccount } from '../types';
+import { getStripeConfig, StripeConfig } from '../services/stripeService';
 
 interface SettingsProps {
   userProfile: UserProfile;
@@ -10,9 +11,12 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpdateProfile, users, onUpdateUsers }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'agency' | 'billing' | 'data'>('team');
+  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'agency' | 'billing' | 'data' | 'subscription'>('team');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Stripe Config State
+  const [stripeConfig, setStripeConfig] = useState<StripeConfig | null>(null);
 
   // User Profile State
   const [userProfile, setUserProfile] = useState<UserProfile>(initialProfile);
@@ -31,7 +35,9 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
     trustBsb: '063-000',
     trustAccount: '1122 3344',
     websiteUrl: '',
-    loginBackgroundImage: ''
+    loginBackgroundImage: '',
+    subscriptionPlan: 'Growth' as 'Starter' | 'Growth' | 'Enterprise', // Added Plan Tracking
+    subscriptionStatus: 'Active'
   });
 
   // Partner Integration State
@@ -67,7 +73,7 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
   useEffect(() => {
     // Load settings from local storage
     const savedAgency = localStorage.getItem('proptrust_agency_settings');
-    if (savedAgency) setAgencyDetails(JSON.parse(savedAgency));
+    if (savedAgency) setAgencyDetails(prev => ({ ...prev, ...JSON.parse(savedAgency) }));
     
     const savedPartners = localStorage.getItem('proptrust_partner_settings');
     if (savedPartners) setPartners(JSON.parse(savedPartners));
@@ -83,8 +89,28 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
         if (parsed.enabled) setLiabilityAccepted(true);
     }
 
+    // Load Stripe Config
+    getStripeConfig().then(setStripeConfig);
+
     // Sync local state if parent prop updates
     setUserProfile(initialProfile);
+
+    // Check for payment success return
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment_success') === 'true') {
+        const newPlan = urlParams.get('plan');
+        if (newPlan) {
+            setAgencyDetails(prev => {
+                const updated = { ...prev, subscriptionPlan: newPlan as any, subscriptionStatus: 'Active' };
+                localStorage.setItem('proptrust_agency_settings', JSON.stringify(updated));
+                return updated;
+            });
+            setSuccessMsg('Subscription updated successfully!');
+            setActiveTab('subscription');
+            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }
   }, [initialProfile]);
 
   const handleSave = () => {
@@ -153,6 +179,33 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
       return base;
   };
 
+  const handleSubscribe = (plan: 'Starter' | 'Growth' | 'Enterprise') => {
+      if (!stripeConfig) return;
+      
+      let url = '';
+      if (plan === 'Starter') url = stripeConfig.starterLink;
+      if (plan === 'Growth') url = stripeConfig.growthLink;
+      if (plan === 'Enterprise') url = stripeConfig.enterpriseLink;
+
+      if (!url || url === '#' || url === '') {
+          alert("Payment link not configured. Please check site-settings.json");
+          return;
+      }
+
+      // We append a query param so when they come back we can simulate a success update (in a real app, webhooks handle this)
+      // Note: Payment links support redirect URLs configured in Stripe Dashboard, 
+      // but for this demo, we assume the user returns to the app manually or via the redirect.
+      window.open(url, '_blank');
+  };
+
+  const handlePortal = () => {
+      if (stripeConfig?.customerPortalLink) {
+          window.open(stripeConfig.customerPortalLink, '_blank');
+      } else {
+          alert("Portal not configured.");
+      }
+  };
+
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400 transition-all";
   const labelClass = "block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2";
 
@@ -189,6 +242,13 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
             {activeTab === 'agency' && <div className="w-2 h-2 bg-white rounded-full" />}
           </button>
           <button 
+            onClick={() => setActiveTab('subscription')}
+            className={`w-full text-left px-5 py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-between ${activeTab === 'subscription' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+          >
+            <span>My Subscription</span>
+            {activeTab === 'subscription' && <div className="w-2 h-2 bg-white rounded-full" />}
+          </button>
+          <button 
             onClick={() => setActiveTab('profile')}
             className={`w-full text-left px-5 py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-between ${activeTab === 'profile' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
           >
@@ -219,6 +279,115 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
         {/* Main Content */}
         <div className="lg:col-span-3">
           
+          {/* Subscription Tab */}
+          {activeTab === 'subscription' && (
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8 animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        </div>
+                        <div>
+                           <h3 className="text-xl font-bold text-slate-900">Subscription Plan</h3>
+                           <p className="text-sm text-slate-500">Manage your 8ME billing and features.</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</span>
+                       <div className="flex items-center justify-end gap-2 mt-1">
+                          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                          <span className="text-emerald-600 font-bold">{agencyDetails.subscriptionStatus || 'Active'}</span>
+                       </div>
+                    </div>
+                </div>
+
+                {/* Current Plan Highlight */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Your Plan</p>
+                        <h2 className="text-3xl font-black text-slate-900">{agencyDetails.subscriptionPlan}</h2>
+                        <p className="text-sm text-slate-500 mt-2">
+                            {agencyDetails.subscriptionPlan === 'Starter' && 'Up to 50 Properties • 1 User'}
+                            {agencyDetails.subscriptionPlan === 'Growth' && 'Up to 200 Properties • 5 Users'}
+                            {agencyDetails.subscriptionPlan === 'Enterprise' && 'Unlimited Properties • 20 Users'}
+                        </p>
+                    </div>
+                    <button 
+                        onClick={handlePortal}
+                        className="px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-100 hover:border-slate-300 transition-all flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        Manage Billing
+                    </button>
+                </div>
+
+                {/* Plans Grid */}
+                <div>
+                    <h4 className="font-bold text-slate-900 mb-6">Available Plans</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Starter */}
+                        <div className={`p-6 rounded-2xl border transition-all ${agencyDetails.subscriptionPlan === 'Starter' ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600' : 'border-slate-200 bg-white'}`}>
+                            <h5 className="font-black text-lg text-slate-900">Starter</h5>
+                            <p className="text-3xl font-bold text-slate-900 mt-2">$68<span className="text-sm text-slate-400 font-medium">/mo</span></p>
+                            <ul className="mt-4 space-y-2 text-xs text-slate-600 font-medium">
+                                <li className="flex items-center">✓ 50 Properties</li>
+                                <li className="flex items-center">✓ 1 User Seat</li>
+                                <li className="flex items-center">✓ Basic Support</li>
+                            </ul>
+                            {agencyDetails.subscriptionPlan === 'Starter' ? (
+                                <button disabled className="w-full mt-6 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest opacity-50 cursor-default">Current Plan</button>
+                            ) : (
+                                <button onClick={() => handleSubscribe('Starter')} className="w-full mt-6 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-50">Downgrade</button>
+                            )}
+                        </div>
+
+                        {/* Growth */}
+                        <div className={`p-6 rounded-2xl border transition-all relative ${agencyDetails.subscriptionPlan === 'Growth' ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600' : 'border-slate-200 bg-white'}`}>
+                            {agencyDetails.subscriptionPlan !== 'Growth' && <div className="absolute top-0 right-0 bg-indigo-100 text-indigo-700 text-[9px] font-bold px-2 py-1 rounded-bl-xl uppercase tracking-widest">Popular</div>}
+                            <h5 className="font-black text-lg text-slate-900">Growth</h5>
+                            <p className="text-3xl font-bold text-slate-900 mt-2">$228<span className="text-sm text-slate-400 font-medium">/mo</span></p>
+                            <ul className="mt-4 space-y-2 text-xs text-slate-600 font-medium">
+                                <li className="flex items-center">✓ 200 Properties</li>
+                                <li className="flex items-center">✓ 5 User Seats</li>
+                                <li className="flex items-center">✓ Priority Support</li>
+                            </ul>
+                            {agencyDetails.subscriptionPlan === 'Growth' ? (
+                                <button disabled className="w-full mt-6 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest opacity-50 cursor-default">Current Plan</button>
+                            ) : (
+                                <button 
+                                    onClick={() => handleSubscribe('Growth')} 
+                                    className={`w-full mt-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest ${agencyDetails.subscriptionPlan === 'Starter' ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg' : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}
+                                >
+                                    {agencyDetails.subscriptionPlan === 'Starter' ? 'Upgrade' : 'Switch'}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Enterprise */}
+                        <div className={`p-6 rounded-2xl border transition-all ${agencyDetails.subscriptionPlan === 'Enterprise' ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600' : 'border-slate-200 bg-white'}`}>
+                            <h5 className="font-black text-lg text-slate-900">Enterprise</h5>
+                            <p className="text-3xl font-bold text-slate-900 mt-2">$1,688<span className="text-sm text-slate-400 font-medium">/mo</span></p>
+                            <ul className="mt-4 space-y-2 text-xs text-slate-600 font-medium">
+                                <li className="flex items-center">✓ Unlimited Assets</li>
+                                <li className="flex items-center">✓ 20 User Seats</li>
+                                <li className="flex items-center">✓ Dedicated Account Mgr</li>
+                            </ul>
+                            {agencyDetails.subscriptionPlan === 'Enterprise' ? (
+                                <button disabled className="w-full mt-6 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest opacity-50 cursor-default">Current Plan</button>
+                            ) : (
+                                <button 
+                                    onClick={() => handleSubscribe('Enterprise')} 
+                                    className={`w-full mt-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest ${agencyDetails.subscriptionPlan !== 'Enterprise' ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg' : ''}`}
+                                >
+                                    Upgrade
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+          )}
+
           {/* Team Access Tab */}
           {activeTab === 'team' && (
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8 animate-in fade-in">
@@ -509,7 +678,7 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
             </div>
           )}
 
-          {/* Integrations (Revenue & Services) Tab - NEWLY UPDATED MENU */}
+          {/* Integrations (Revenue & Services) Tab */}
           {activeTab === 'billing' && (
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8 animate-in fade-in">
               <div className="flex items-center space-x-4 border-b border-slate-100 pb-6">

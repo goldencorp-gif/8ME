@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Property, MaintenanceTask, CalendarEvent } from '../types';
 import { generateEntryNotice } from '../services/geminiService';
+import ScheduleAssistant from '../components/ScheduleAssistant';
 
 interface ScheduleProps {
   properties?: Property[];
@@ -16,6 +17,9 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   
+  // Custom Sort Order (Event IDs)
+  const [customOrder, setCustomOrder] = useState<string[]>([]);
+
   // Notice State
   const [noticeDraft, setNoticeDraft] = useState('');
   const [loadingNotice, setLoadingNotice] = useState(false);
@@ -173,7 +177,27 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
     return allEvents.filter(e => e.date === dateStr);
   };
 
-  const selectedDayEvents = getEventsForDate(selectedDate);
+  const rawSelectedDayEvents = getEventsForDate(selectedDate);
+  
+  // Apply Custom Sort if available
+  const selectedDayEvents = useMemo(() => {
+    if (customOrder.length > 0) {
+      // Sort based on index in customOrder array
+      return [...rawSelectedDayEvents].sort((a, b) => {
+        const idxA = customOrder.indexOf(a.id);
+        const idxB = customOrder.indexOf(b.id);
+        // If both exist in custom order, sort by index
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        // If only A exists, it goes first
+        if (idxA !== -1) return -1;
+        // If only B exists, it goes first
+        if (idxB !== -1) return 1;
+        // Otherwise default sort
+        return 0; 
+      });
+    }
+    return rawSelectedDayEvents;
+  }, [rawSelectedDayEvents, customOrder]);
 
   const getEventTypeColor = (type: CalendarEvent['type']) => {
     switch (type) {
@@ -209,6 +233,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                 const today = new Date();
                 setCurrentDate(today);
                 setSelectedDate(today);
+                setCustomOrder([]); // Reset sort when changing date
               }}
               className="px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 hover:text-indigo-600"
             >
@@ -245,7 +270,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
             return (
               <div 
                 key={dateKey} 
-                onClick={() => setSelectedDate(date)}
+                onClick={() => { setSelectedDate(date); setCustomOrder([]); }}
                 className={`bg-white p-2 min-h-[140px] cursor-pointer hover:bg-indigo-50/30 transition-colors flex flex-col relative ${isSelected ? 'ring-2 ring-inset ring-indigo-500 z-10' : ''}`}
               >
                 <div className="flex justify-between items-start mb-2">
@@ -270,37 +295,17 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
         </div>
       </div>
 
-      {/* Right: Agenda & Tools View */}
+      {/* Right: Agenda & AI Tools View */}
       <div className="w-full lg:w-[400px] flex flex-col space-y-6 shrink-0">
         
-        {/* Compliance Action Widget (New) */}
-        {upcomingInspections.length > 0 && (
-          <div className="bg-white rounded-[2.5rem] border border-amber-200 shadow-xl overflow-hidden">
-             <div className="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
-                <h4 className="text-amber-800 font-bold text-sm flex items-center">
-                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                   Compliance Actions
-                </h4>
-                <span className="text-[10px] font-black uppercase tracking-widest bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">{upcomingInspections.length} Due</span>
-             </div>
-             <div className="p-4 space-y-3 max-h-[250px] overflow-y-auto">
-                {upcomingInspections.map(insp => (
-                   <div key={insp.id} className="p-3 border border-amber-100 rounded-xl bg-white flex justify-between items-center group">
-                      <div>
-                         <p className="text-xs font-bold text-slate-900">{insp.propertyAddress}</p>
-                         <p className="text-[10px] text-slate-500">Insp: {new Date(insp.date).toLocaleDateString()}</p>
-                      </div>
-                      <button 
-                        onClick={() => handleDraftNotice(insp)}
-                        className="px-3 py-1.5 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-lg hover:bg-amber-600 shadow-md transition-all active:scale-95"
-                      >
-                        Draft Notice
-                      </button>
-                   </div>
-                ))}
-             </div>
-          </div>
-        )}
+        {/* NEW AI ASSISTANT */}
+        <ScheduleAssistant 
+          currentDate={selectedDate}
+          dayEvents={selectedDayEvents}
+          allHistoryEvents={allEvents}
+          onAddEvent={onAddEvent}
+          onReorderEvents={setCustomOrder}
+        />
 
         {/* Selected Date Agenda */}
         <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 flex flex-col min-h-[400px]">

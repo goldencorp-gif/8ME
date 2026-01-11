@@ -27,6 +27,40 @@ You can customize the application logos without rebuilding the app code.
 
 ---
 
+## 💳 Stripe Payments Integration
+
+This app supports recurring payments using Stripe Payment Links. This allows agencies to subscribe to Starter, Growth, or Enterprise plans directly from the `Settings > Subscription` tab.
+
+### How to Configure Stripe
+1.  **Create Payment Links**:
+    *   Log in to your Stripe Dashboard.
+    *   Create 3 Products: "Starter Plan", "Growth Plan", and "Enterprise Plan" with recurring monthly prices.
+    *   For each product, generate a **Payment Link** (e.g., `https://buy.stripe.com/test_...`).
+    *   *Optional:* Configure the Redirect URL on success to: `https://your-app-url.com/app/settings?payment_success=true&plan=Growth` (Replace `Growth` with the respective plan name).
+
+2.  **Enable Customer Portal**:
+    *   Go to **Stripe Dashboard > Settings > Customer Portal**.
+    *   Enable the portal and copy the **Portal Link**.
+
+3.  **Update Config File**:
+    *   Open `site-settings.json` (or `public/site-settings.json`).
+    *   Paste your links into the `stripe` section:
+
+```json
+{
+  "stripe": {
+    "starterLink": "https://buy.stripe.com/test_...",
+    "growthLink": "https://buy.stripe.com/test_...",
+    "enterpriseLink": "https://buy.stripe.com/test_...",
+    "customerPortalLink": "https://billing.stripe.com/p/login/..."
+  }
+}
+```
+
+The app will now redirect users to these links when they click "Upgrade" or "Switch Plan".
+
+---
+
 ## 🚀 Option 1: Run as a Web App (SaaS)
 *Best for: Desktop users, Office Admins, and selling subscriptions directly to agencies.*
 

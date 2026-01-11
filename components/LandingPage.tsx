@@ -17,6 +17,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRequestDemo }
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -495,18 +497,91 @@ For privacy inquiries, please contact: privacy@8me.com
       {/* Footer */}
       <footer className="bg-slate-950 py-12 border-t border-slate-900">
          <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <BrandLogo variant="footer" />
-              <span className="text-slate-600 text-sm px-2">|</span>
-              <span className="text-slate-600 text-xs uppercase tracking-widest font-bold">Agent Operating System</span>
+            <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2 mb-4 md:mb-0">
+                <div className="flex items-center space-x-2">
+                    <BrandLogo variant="footer" />
+                    <span className="text-slate-600 text-sm px-2 hidden md:inline">|</span>
+                    <span className="text-slate-600 text-xs uppercase tracking-widest font-bold">Agent Operating System</span>
+                </div>
+                <span className="text-slate-700 text-xs font-bold md:ml-4">© {new Date().getFullYear()} 8ME Pty Ltd. All rights reserved.</span>
             </div>
             <div className="flex space-x-8 text-xs font-bold text-slate-500 uppercase tracking-widest">
-               <button onClick={() => window.alert('Support contact: help@8me.com')} className="hover:text-white transition-colors">Support</button>
-               <button onClick={() => window.alert('All systems operational')} className="hover:text-white transition-colors">Status</button>
+               <button onClick={() => setShowSupportModal(true)} className="hover:text-white transition-colors">Support</button>
+               <button onClick={() => setShowStatusModal(true)} className="hover:text-white transition-colors">Status</button>
                <button onClick={() => setShowPrivacyModal(true)} className="hover:text-white transition-colors">Legal & Privacy</button>
             </div>
          </div>
       </footer>
+
+      {/* Support Modal */}
+      {showSupportModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm animate-in fade-in" onClick={() => setShowSupportModal(false)} />
+          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="text-2xl font-black text-slate-900 tracking-tight">Contact Support</h3>
+               <button onClick={() => setShowSupportModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+               </button>
+             </div>
+             <div className="space-y-6">
+                <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start space-x-4">
+                   <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
+                   </div>
+                   <div>
+                      <h4 className="font-bold text-indigo-900">Email Us</h4>
+                      <p className="text-sm text-indigo-700/80 mb-2">Our team typically responds within 2 hours during business hours.</p>
+                      <a href="mailto:help@8me.com" className="text-sm font-bold text-indigo-600 underline">help@8me.com</a>
+                   </div>
+                </div>
+                
+                <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-start space-x-4">
+                   <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                   </div>
+                   <div>
+                      <h4 className="font-bold text-emerald-900">Priority Phone Support</h4>
+                      <p className="text-sm text-emerald-700/80 mb-2">Available Mon-Fri, 9am - 5pm AEST for Enterprise customers.</p>
+                      <span className="text-sm font-bold text-emerald-600">1300 000 000</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm animate-in fade-in" onClick={() => setShowStatusModal(false)} />
+          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
+             <div className="flex justify-between items-center mb-6">
+               <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">System Status</h3>
+               </div>
+               <button onClick={() => setShowStatusModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+               </button>
+             </div>
+             
+             <div className="space-y-4">
+                {['API Services', 'Database Clusters', 'Payments Gateway', 'CDN & Assets'].map((service) => (
+                   <div key={service} className="flex justify-between items-center p-4 border border-slate-100 rounded-xl bg-slate-50">
+                      <span className="font-bold text-slate-700">{service}</span>
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full uppercase tracking-widest">Operational</span>
+                   </div>
+                ))}
+                
+                <div className="mt-6 pt-6 border-t border-slate-100 flex justify-between items-center text-sm">
+                   <span className="text-slate-500 font-bold">Uptime (Last 30 Days)</span>
+                   <span className="text-emerald-600 font-black">99.99%</span>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* Full Screen Legal Modal (Terms) */}
       {showTermsModal && (
