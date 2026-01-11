@@ -113,6 +113,9 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Switch view to see import
+    setActiveView('bank-feed');
+
     // Simulate parsing a CSV file
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -132,7 +135,10 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Switch to bank feed view immediately so user sees loading state
+    setActiveView('bank-feed');
     setIsScanning(true);
+    
     const reader = new FileReader();
     reader.onloadend = async () => {
         const base64 = (reader.result as string).split(',')[1];
@@ -409,6 +415,23 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12 relative">
       
+      {/* GLOBAL HIDDEN INPUTS - Accessible from any tab */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        accept=".csv,.txt,.aba,.bai2" 
+        onChange={handleFileUpload} 
+        className="hidden" 
+      />
+      <input 
+        type="file" 
+        ref={scanInputRef} 
+        accept="image/*" 
+        capture="environment" 
+        onChange={handleAiStatementUpload} 
+        className="hidden" 
+      />
+
       {/* Compliance Disclaimer */}
       <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r-xl shadow-sm">
         <div className="flex items-start">
@@ -509,6 +532,14 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
             <div className="flex justify-between items-center">
                <h3 className="font-bold text-slate-900">Recent Transactions</h3>
                <div className="flex space-x-3">
+                  {/* NEW SCAN BUTTON: Quick Access */}
+                  <button 
+                    onClick={() => scanInputRef.current?.click()} 
+                    className="px-5 py-2.5 bg-violet-50 text-violet-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-100 active:scale-95 transition-all flex items-center gap-2 border border-violet-100"
+                  >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      Scan with Camera
+                  </button>
                   <button onClick={() => setIsPaymentModalOpen(true)} className="px-5 py-2.5 bg-rose-50 text-rose-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 active:scale-95 transition-all flex items-center gap-2 border border-rose-100">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
                       Create Payment
@@ -584,23 +615,6 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
                   </div>
                </div>
                <div className="flex items-center gap-3">
-                  {/* Hidden File Inputs */}
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    accept=".csv,.txt,.aba,.bai2" 
-                    onChange={handleFileUpload} 
-                    className="hidden" 
-                  />
-                  <input 
-                    type="file" 
-                    ref={scanInputRef} 
-                    accept="image/*" 
-                    capture="environment" // Hint to use camera on mobile
-                    onChange={handleAiStatementUpload} 
-                    className="hidden" 
-                  />
-
                   {/* AI Scan Button */}
                   <button 
                     onClick={() => scanInputRef.current?.click()}
