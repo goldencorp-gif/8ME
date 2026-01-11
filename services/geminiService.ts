@@ -538,3 +538,24 @@ export const summarizePropertyHistory = async (address: string, events: any[]) =
     return "Error generating summary.";
   }
 };
+
+export const generateTaskSuggestions = async (taskTitle: string, taskType: string, taskDesc: string, taskAddress: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Context: Property Manager Task Assistant.
+      
+      Task: ${taskTitle}
+      Type: ${taskType}
+      Address: ${taskAddress}
+      Notes: ${taskDesc}
+
+      Provide 3 concise, actionable suggestions or steps to prepare for or complete this task effectively. 
+      Focus on practical actions (e.g., keys, notices, specific documents to bring).`
+    });
+    return response.text;
+  } catch (e) {
+    return "Unable to generate suggestions at this time.";
+  }
+};

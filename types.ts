@@ -142,4 +142,14 @@ export interface LogbookEntry {
   driver: string;
 }
 
+export interface HistoryRecord {
+  id: string;
+  date: string; // ISO String
+  type: 'Communication' | 'Event' | 'Note' | 'Maintenance' | 'System';
+  description: string;
+  propertyAddress?: string;
+  relatedId?: string; 
+  metadata?: any;
+}
+
 export type LandingView = 'home' | 'listings' | 'listing-detail' | 'blog' | 'saas';

@@ -9,12 +9,12 @@ import Maintenance from './pages/Maintenance';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import MasterConsole from './pages/MasterConsole';
-import Logbook from './pages/Logbook'; // Import new page
+import Logbook from './pages/Logbook';
 import Login from './components/Login';
 import LandingPage from './components/LandingPage';
 import AddPropertyModal from './components/AddPropertyModal';
 import PropertyDetailView from './components/PropertyDetailView';
-import { Property, Transaction, MaintenanceTask, UserAccount, CalendarEvent, Inquiry, Agency } from './types';
+import { Property, Transaction, MaintenanceTask, UserAccount, CalendarEvent, Inquiry, Agency, HistoryRecord } from './types';
 import { useAuth } from './contexts/AuthContext';
 import { db } from './services/db';
 
@@ -89,7 +89,8 @@ const App: React.FC = () => {
         Promise.all([
             db.transactions.list(),
             db.maintenance.list(),
-            db.calendar.list()
+            db.calendar.list(),
+            db.history.list() // Load history logic just to initialize folder if missing
         ]).then(([txs, tasks, events]) => {
             setTransactions(txs);
             setMaintenanceTasks(tasks);
@@ -113,6 +114,11 @@ const App: React.FC = () => {
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Centralized History Recorder
+  const handleRecordHistory = async (record: HistoryRecord) => {
+    await db.history.add(record);
   };
 
   const handleSendInquiry = (inquiry: Inquiry) => {
@@ -200,12 +206,34 @@ const App: React.FC = () => {
     await db.maintenance.save(task);
     const freshTasks = await db.maintenance.list();
     setMaintenanceTasks(freshTasks);
+    
+    // Log to History
+    await db.history.add({
+        id: `hist-maint-${Date.now()}`,
+        date: new Date().toISOString(),
+        type: 'Maintenance',
+        description: `Work Order Update: ${task.issue} - ${task.status}`,
+        propertyAddress: task.propertyAddress,
+        relatedId: task.id
+    });
+
     showToast('Work order updated');
   };
 
   const handleAddCalendarEvent = async (event: CalendarEvent) => {
     await db.calendar.add(event);
     setCalendarEvents(prev => [...prev, event]);
+    
+    // Log to History
+    await db.history.add({
+        id: `hist-evt-${Date.now()}`,
+        date: new Date().toISOString(),
+        type: 'Event',
+        description: `Scheduled: ${event.title} (${event.type})`,
+        propertyAddress: event.propertyAddress,
+        relatedId: event.id
+    });
+
     showToast('Calendar updated');
   };
 
@@ -250,7 +278,13 @@ const App: React.FC = () => {
       case 'maintenance':
         return <Maintenance tasks={maintenanceTasks} properties={properties} onAddTask={handleUpdateMaintenance} onUpdateTask={handleUpdateMaintenance} />;
       case 'schedule':
-        return <Schedule properties={properties} maintenanceTasks={maintenanceTasks} manualEvents={calendarEvents} onAddEvent={handleAddCalendarEvent} />;
+        return <Schedule 
+                  properties={properties} 
+                  maintenanceTasks={maintenanceTasks} 
+                  manualEvents={calendarEvents} 
+                  onAddEvent={handleAddCalendarEvent} 
+                  onRecordHistory={handleRecordHistory}
+               />;
       case 'logbook':
         return <Logbook />; // New Route
       case 'settings':
@@ -305,25 +339,27 @@ const App: React.FC = () => {
                       </div>
                       <div className="absolute bottom-5 left-5">
                         <div className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-xl flex items-center space-x-2 shadow-lg">
-                           <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">{(prop.documents || []).length} Files</span>
+                           <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                           <span className="text-[10px] font-black text-slate-800 uppercase tracking-wide truncate max-w-[150px]">{prop.address.split(',')[1] || 'Australia'}</span>
                         </div>
                       </div>
                     </div>
                     <div className="p-8">
-                      <h3 className="font-bold text-slate-900 truncate text-xl leading-tight group-hover:text-indigo-600 transition-colors">{prop.address}</h3>
-                      <p className="text-xs text-slate-400 mt-2 font-medium uppercase tracking-widest">{prop.ownerName}</p>
-                      <div className="mt-8 flex justify-between items-end border-t border-slate-50 pt-6">
-                        <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1.5">Asset Value</p>
-                          <div className="flex items-baseline space-x-1">
-                            <span className="text-3xl font-black text-slate-900 tracking-tight">${prop.rentAmount.toLocaleString()}</span>
-                            <span className="text-xs text-slate-400 font-bold">/{prop.rentFrequency.substring(0, 2).toLowerCase()}</span>
-                          </div>
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="font-black text-xl text-slate-900 leading-tight w-2/3">{prop.address.split(',')[0]}</h3>
+                        <p className="text-xl font-bold text-indigo-600">${prop.rentAmount}<span className="text-xs text-slate-400 font-normal">/{prop.rentFrequency === 'Weekly' ? 'pw' : 'mo'}</span></p>
+                      </div>
+                      <div className="flex space-x-4 mb-6">
+                        {prop.beds && <span className="flex items-center text-xs font-bold text-slate-500"><span className="text-slate-900 mr-1.5 text-sm">{prop.beds}</span> Beds</span>}
+                        {prop.baths && <span className="flex items-center text-xs font-bold text-slate-500"><span className="text-slate-900 mr-1.5 text-sm">{prop.baths}</span> Baths</span>}
+                        {prop.parking && <span className="flex items-center text-xs font-bold text-slate-500"><span className="text-slate-900 mr-1.5 text-sm">{prop.parking}</span> Cars</span>}
+                      </div>
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-6">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${prop.tenantName ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{prop.tenantName || 'Vacant'}</span>
                         </div>
-                        <div className="w-12 h-12 bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white rounded-[1.25rem] flex items-center justify-center transition-all shadow-sm">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                        </div>
+                        <span className="text-[10px] font-bold text-slate-300">ID: {prop.id}</span>
                       </div>
                     </div>
                   </div>
@@ -333,120 +369,86 @@ const App: React.FC = () => {
           </div>
         );
       default:
-        return <div className="flex flex-col items-center justify-center h-[60vh] text-center text-slate-400 italic uppercase tracking-widest">Module Loading...</div>;
+        return <div>Select a tab</div>;
     }
   };
 
-  // --- VIEW CONTROLLER ---
-  
-  if (viewState === 'landing') {
-    return (
-      <LandingPage 
-        properties={properties} 
-        onLoginClick={() => { 
-            setViewState('login');
-        }} 
-        onRequestDemo={() => {
-          // Force user to login first before seeing app
-          setViewState('login');
-        }}
-        onSendInquiry={handleSendInquiry}
-      />
-    );
-  }
-
-  if (viewState === 'login') {
-    return <Login />;
-  }
-
-  // viewState === 'app'
   return (
-    <div className="flex min-h-screen selection:bg-indigo-100 selection:text-indigo-900">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        userProfile={user || { name: 'Demo User', title: 'Manager', email: 'demo@8me.com', phone: '' }} 
-        userRole={role} 
-        onLogout={() => {
-           logout();
-           setViewState('landing');
-        }} 
-        isMobileOpen={isMobileNavOpen}
-        setIsMobileOpen={setIsMobileNavOpen}
+    <>
+      {viewState === 'landing' && <LandingPage onLoginClick={() => setViewState('login')} onRequestDemo={() => setViewState('login')} />}
+      
+      {viewState === 'login' && <Login />}
+
+      {viewState === 'app' && (
+        <div className="flex min-h-screen bg-slate-50">
+          <Sidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            userProfile={user || { name: 'User', email: 'email', title: 'Role', phone: '' }}
+            userRole={role}
+            onLogout={logout}
+            isMobileOpen={isMobileNavOpen}
+            setIsMobileOpen={setIsMobileNavOpen}
+          />
+          <main className="flex-1 lg:ml-64 p-4 lg:p-8 overflow-x-hidden">
+             {/* Mobile Header */}
+             <div className="lg:hidden flex justify-between items-center mb-6">
+                <button onClick={() => setIsMobileNavOpen(true)} className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+                <span className="font-bold text-slate-900">8ME</span>
+                <div className="w-10" /> 
+             </div>
+
+             {toast && (
+                <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-xl shadow-2xl flex items-center space-x-3 animate-in slide-in-from-top-2 duration-300 ${toast.type === 'error' ? 'bg-rose-500 text-white' : 'bg-slate-900 text-white'}`}>
+                   {toast.type === 'success' && <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                   <span className="font-bold text-sm">{toast.msg}</span>
+                </div>
+             )}
+
+             {renderContent()}
+          </main>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {propertyToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md animate-in fade-in" onClick={() => setPropertyToDelete(null)} />
+          <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 text-center animate-in zoom-in-95">
+             <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-6">
+               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+             </div>
+             <h3 className="text-xl font-bold text-slate-900 mb-2">Archive Property?</h3>
+             <p className="text-sm text-slate-500 mb-8">This will remove the property from your active list. Financial history will be preserved for audit purposes.</p>
+             <div className="flex gap-3">
+               <button onClick={() => setPropertyToDelete(null)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50">Cancel</button>
+               <button onClick={executeDeleteProperty} className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-700 shadow-xl shadow-rose-200">Archive</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      <AddPropertyModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        onAdd={handleAddOrUpdateProperty}
+        editProperty={propertyToEdit}
       />
-      <main className="flex-1 lg:ml-64 min-h-screen p-4 md:p-10 transition-all duration-300 bg-slate-50/30 relative">
-        <header className="flex justify-between items-center mb-6 md:mb-10 bg-white/80 backdrop-blur-xl sticky top-0 z-30 py-4 md:py-6 border-b border-slate-200/50 -mx-4 md:-mx-10 px-4 md:px-10">
-          <div className="flex items-center gap-3">
-            <button 
-                onClick={() => setIsMobileNavOpen(true)}
-                className="lg:hidden p-2 text-slate-900 hover:bg-slate-100 rounded-lg"
-            >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
-            <div className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter uppercase truncate max-w-[150px] md:max-w-none">
-                {activeTab === 'master-console' ? 'System Admin' : activeTab}
-            </div>
-          </div>
-          <button onClick={() => setActiveTab('schedule')} className="px-4 md:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 font-bold text-sm flex items-center space-x-2">
-            <div className="w-5 h-5 bg-white/20 rounded-lg flex items-center justify-center text-[10px]">AI</div>
-            <span className="hidden md:inline">Assistant</span>
-          </button>
-        </header>
 
-        {renderContent()}
-
-        {toast && (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-2xl animate-in fade-in slide-in-from-bottom-4 flex items-center space-x-2">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            <span>{toast.msg}</span>
-          </div>
-        )}
-
-        <AddPropertyModal isOpen={isAddModalOpen} onClose={() => { setIsAddModalOpen(false); setPropertyToEdit(null); }} onAdd={handleAddOrUpdateProperty} editProperty={propertyToEdit} />
-        
+      {selectedProperty && (
         <PropertyDetailView 
           property={selectedProperty} 
           transactions={transactions}
-          onClose={() => setSelectedProperty(null)} 
-          onEdit={handleEditProperty} 
-          onExport={handleExportLedger} 
+          onClose={() => setSelectedProperty(null)}
+          onEdit={handleEditProperty}
+          onExport={handleExportLedger}
           onUpdateProperty={handleAddOrUpdateProperty}
           onAddTransaction={handleAddTransaction}
         />
-
-        {propertyToDelete && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md animate-in fade-in" onClick={() => setPropertyToDelete(null)} />
-            <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
-              <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 mx-auto">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-              </div>
-              
-              <h3 className="text-xl font-bold text-slate-900 text-center mb-2">Archive Property?</h3>
-              <p className="text-sm text-slate-500 text-center mb-6">
-                You are about to archive <strong className="text-slate-900">{properties.find(p => p.id === propertyToDelete)?.address}</strong>. <br/><br/>
-                <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100">Ledger history will be preserved</span>
-              </p>
-              
-              <div className="flex space-x-3">
-                <button 
-                  onClick={() => setPropertyToDelete(null)}
-                  className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={executeDeleteProperty}
-                  className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-700 shadow-xl shadow-rose-100"
-                >
-                  Archive
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+      )}
+    </>
   );
 };
 

@@ -1,5 +1,5 @@
 
-import { Property, Transaction, MaintenanceTask, CalendarEvent, LogbookEntry } from '../types';
+import { Property, Transaction, MaintenanceTask, CalendarEvent, LogbookEntry, HistoryRecord } from '../types';
 import { MOCK_PROPERTIES, MOCK_TRANSACTIONS, MOCK_MAINTENANCE } from '../constants';
 
 // --- DATA LAYER (BYOD Support) ---
@@ -139,6 +139,14 @@ export const db = {
     add: async (entry: LogbookEntry) => {
         const list = await dbRead<LogbookEntry[]>('logbook', []);
         await dbWrite('logbook', [entry, ...list]);
+    }
+  },
+
+  history: {
+    list: () => dbRead<HistoryRecord[]>('history', []),
+    add: async (record: HistoryRecord) => {
+      const list = await dbRead<HistoryRecord[]>('history', []);
+      await dbWrite('history', [record, ...list]);
     }
   }
 };

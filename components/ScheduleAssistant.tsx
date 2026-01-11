@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { CalendarEvent } from '../types';
-import { processScheduleVoiceCommand, optimizeScheduleOrder, generateScheduleTips, summarizePropertyHistory } from '../services/geminiService';
+import { processScheduleVoiceCommand, optimizeScheduleOrder, generateScheduleTips, summarizePropertyHistory, generateTaskSuggestions } from '../services/geminiService';
 
 interface ScheduleAssistantProps {
   currentDate: Date;
@@ -9,6 +9,7 @@ interface ScheduleAssistantProps {
   allHistoryEvents: CalendarEvent[];
   onAddEvent: (event: CalendarEvent) => void;
   onReorderEvents: (orderedIds: string[]) => void;
+  suggestTask?: CalendarEvent | null;
 }
 
 const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({ 
@@ -16,7 +17,8 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   dayEvents, 
   allHistoryEvents,
   onAddEvent, 
-  onReorderEvents 
+  onReorderEvents,
+  suggestTask
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -31,14 +33,31 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Effect to generate daily tip
   useEffect(() => {
-    // Generate a fresh tip when the day's events change
-    if (dayEvents.length > 0) {
+    if (dayEvents.length > 0 && !suggestTask) {
       generateScheduleTips(dayEvents).then(msg => setAssistantMessage(`Tip: ${msg}`));
-    } else {
-        setAssistantMessage("Day is clear. I'm ready to help organize your schedule.");
+    } else if (!suggestTask) {
+      setAssistantMessage("Day is clear. I'm ready to help organize your schedule.");
     }
-  }, [dayEvents]);
+  }, [dayEvents]); // Removed suggestTask from dependency to avoid overwriting suggestion immediately unless events change
+
+  // Effect to handle Task Suggestion
+  useEffect(() => {
+    if (suggestTask) {
+      setProcessing(true);
+      setAssistantMessage(`Generating suggestions for "${suggestTask.title}"...`);
+      generateTaskSuggestions(
+        suggestTask.title, 
+        suggestTask.type, 
+        suggestTask.description || '', 
+        suggestTask.propertyAddress || ''
+      ).then(text => {
+         setAssistantMessage(`${text}`); // Removed prefix to be cleaner
+         setProcessing(false);
+      });
+    }
+  }, [suggestTask]);
 
   const toggleRecording = async () => {
     if (isRecording) {
@@ -73,6 +92,10 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
 
   const startRecording = async () => {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Browser API not supported");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -110,9 +133,15 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
 
       mediaRecorder.start();
       setIsRecording(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error accessing microphone:", err);
-      setAssistantMessage("Could not access microphone. Please check permissions.");
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setAssistantMessage("Microphone blocked. Please allow access in your browser address bar.");
+      } else if (err.message === "Browser API not supported") {
+        setAssistantMessage("Microphone not supported in this browser context.");
+      } else {
+        setAssistantMessage("Could not access microphone. Please check device settings.");
+      }
     }
   };
 
@@ -196,58 +225,52 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   };
 
   return (
-    <div className="bg-gradient-to-b from-indigo-50 to-white rounded-[2.5rem] border border-indigo-100 shadow-xl overflow-hidden flex flex-col h-full">
-      <div className="p-6 bg-indigo-600 text-white flex items-center justify-between">
+    <div className="bg-gradient-to-b from-indigo-50 to-white rounded-2xl border border-indigo-100 shadow-sm overflow-hidden flex flex-col mb-4">
+      <div className="p-4 bg-indigo-600 text-white flex items-center justify-between">
         <div>
-           <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+           <h3 className="text-sm font-black tracking-tight flex items-center gap-2">
+             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
              Schedule AI
            </h3>
-           <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-widest">Intelligent Assistant</p>
+        </div>
+        <div className="flex items-center gap-2">
+           {suggestTask && <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded font-bold">Suggesting...</span>}
         </div>
       </div>
 
-      <div className="p-6 space-y-8 flex-1 overflow-y-auto">
+      <div className="p-4 space-y-4 flex-1">
         
-        {/* Voice Command Section */}
-        <div className="text-center space-y-4">
-           <div className="relative inline-block">
+        <div className="flex items-start gap-4">
+            {/* Voice Command Button - Compact */}
+            <div className="shrink-0 relative">
               {isRecording && (
                  <div className="absolute inset-0 bg-rose-500 rounded-full animate-ping opacity-75"></div>
               )}
               <button
                 onClick={toggleRecording}
                 disabled={processing}
-                className={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-95 ${isRecording ? 'bg-rose-600 text-white' : 'bg-white text-indigo-600 border-4 border-indigo-50'}`}
+                className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRecording ? 'bg-rose-600 text-white' : 'bg-white text-indigo-600 border-2 border-indigo-100 hover:border-indigo-300'}`}
               >
                 {processing ? (
-                   <svg className="w-8 h-8 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                   <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                 ) : isRecording ? (
-                   <div className="w-8 h-8 bg-white rounded-sm animate-pulse" /> // Stop Icon
+                   <div className="w-4 h-4 bg-white rounded-sm animate-pulse" /> 
                 ) : (
-                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                 )}
               </button>
-           </div>
-           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-             {isRecording ? "Listening... Click to Stop" : processing ? "Thinking..." : "Tap to Speak"}
-           </p>
-        </div>
+            </div>
 
-        {/* AI Response Bubble */}
-        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 min-h-[80px] flex items-center">
-             <div className="flex items-start gap-3 w-full">
-                <div className="bg-white p-1.5 rounded-lg text-indigo-600 shadow-sm shrink-0">
-                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                </div>
-                <div>
-                   <h5 className="text-[10px] font-black uppercase text-indigo-800 tracking-widest mb-1">AI Response</h5>
-                   <p className="text-xs text-indigo-900 leading-relaxed font-medium">{assistantMessage}</p>
-                </div>
-             </div>
+            {/* AI Response Bubble */}
+            <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex-1 min-h-[60px] flex items-center">
+                 <div className="w-full">
+                    <h5 className="text-[9px] font-black uppercase text-indigo-800 tracking-widest mb-1">{suggestTask ? `Advice for: ${suggestTask.type}` : 'AI Response'}</h5>
+                    <div className="text-xs text-indigo-900 leading-relaxed font-medium whitespace-pre-line">
+                        {assistantMessage || "Ready to assist."}
+                    </div>
+                 </div>
+            </div>
         </div>
-
-        <hr className="border-indigo-50" />
 
         {/* Schedule List (Visible when asked) */}
         {scheduleList && (
@@ -268,53 +291,48 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
           </div>
         )}
 
-        {/* Actions */}
-        <div>
-           <h4 className="text-xs font-black uppercase text-indigo-900 tracking-widest mb-3">Quick Actions</h4>
-           <div className="grid grid-cols-2 gap-2">
+        {/* Compact Actions Row */}
+        <div className="flex gap-2">
              <button 
                onClick={handleOptimize}
                disabled={dayEvents.length < 2 || processing}
-               className="py-3 bg-white border border-indigo-100 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-50 shadow-sm transition-all flex items-center justify-center gap-1 disabled:opacity-50"
+               className="flex-1 py-2 bg-white border border-indigo-100 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-50 shadow-sm transition-all flex items-center justify-center gap-1 disabled:opacity-50"
              >
                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-               Optimize
+               Optimize Route
              </button>
              <button 
-               onClick={() => setScheduleList(null)} // Clear list to reset view
-               className="py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition-all"
+               onClick={() => setScheduleList(null)}
+               className="px-3 py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-[10px] font-bold hover:bg-slate-50 shadow-sm transition-all"
              >
                Clear View
              </button>
-           </div>
         </div>
 
         {/* History Lookup */}
-        <div>
-           <h4 className="text-xs font-black uppercase text-indigo-900 tracking-widest mb-3">Property History</h4>
-           <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Search Address..."
-                value={historyQuery}
-                onChange={(e) => setHistoryQuery(e.target.value)}
-                className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-              <button 
-                onClick={() => handleLookupHistory()}
-                className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </button>
-           </div>
-           {historyResult && (
-             <div className="mt-3 p-4 bg-white border border-slate-200 rounded-xl max-h-40 overflow-y-auto">
-                <div className="prose prose-sm text-xs text-slate-600">
-                   {historyResult.split('\n').map((line, i) => <p key={i} className="mb-1">{line}</p>)}
-                </div>
-             </div>
-           )}
+        {/* Only show if expanded or specifically asked, to save space. For now, keep simple. */}
+        <div className="relative">
+            <input 
+            type="text" 
+            placeholder="Ask history for address..."
+            value={historyQuery}
+            onChange={(e) => setHistoryQuery(e.target.value)}
+            className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+            />
+            <button 
+            onClick={() => handleLookupHistory()}
+            className="absolute right-1 top-1 p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200"
+            >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </button>
         </div>
+        {historyResult && (
+            <div className="mt-2 p-3 bg-white border border-slate-200 rounded-xl max-h-32 overflow-y-auto">
+            <div className="prose prose-sm text-xs text-slate-600">
+                {historyResult.split('\n').map((line, i) => <p key={i} className="mb-1">{line}</p>)}
+            </div>
+            </div>
+        )}
 
       </div>
 
