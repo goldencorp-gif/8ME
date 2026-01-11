@@ -22,7 +22,7 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   onUpdateProperty,
   onAddTransaction
 }) => {
-  const [activeTab, setActiveTab] = useState<'details' | 'vault' | 'comms'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'owner' | 'vault' | 'comms'>('details');
   const [selectedFolder, setSelectedFolder] = useState<PropertyDocument['category'] | null>(null);
   const [invoiceSubFolder, setInvoiceSubFolder] = useState<'Owner' | 'Tenant'>('Owner');
   const [previewDoc, setPreviewDoc] = useState<PropertyDocument | null>(null);
@@ -306,6 +306,7 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         <div className="px-10 bg-white border-b border-slate-100 flex space-x-4">
           {[
             { id: 'details', label: 'Financials' },
+            { id: 'owner', label: 'Landlord' },
             { id: 'vault', label: 'Document Vault' },
             { id: 'comms', label: 'Contacts & Log' }
           ].map(tab => (
@@ -437,6 +438,105 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'owner' && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+               {/* Owner Profile Card */}
+               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+                  <div className="flex items-center space-x-6">
+                     <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-[2rem] flex items-center justify-center text-3xl font-black shadow-inner shrink-0">
+                        {property.ownerName.charAt(0)}
+                     </div>
+                     <div>
+                        <div className="flex items-center space-x-2 mb-1">
+                           <span className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest">Property Owner</span>
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">{property.ownerName}</h2>
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 mt-2 text-sm font-medium text-slate-500">
+                           {property.ownerEmail && (
+                             <a href={`mailto:${property.ownerEmail}`} className="hover:text-indigo-600 flex items-center gap-1">
+                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
+                               {property.ownerEmail}
+                             </a>
+                           )}
+                           {property.ownerPhone && (
+                             <a href={`tel:${property.ownerPhone}`} className="hover:text-indigo-600 flex items-center gap-1">
+                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                               {property.ownerPhone}
+                             </a>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+                  <button onClick={() => onEdit(property)} className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors shadow-lg active:scale-95 whitespace-nowrap">
+                    Edit Details
+                  </button>
+               </div>
+
+               {/* Banking & Agreement */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Bank Details */}
+                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col justify-between">
+                     <div>
+                        <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
+                           <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" /></svg>
+                           </div>
+                           Disbursement Account
+                        </h3>
+                        <div className="space-y-4">
+                           <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Account Name</p>
+                              <p className="text-lg font-medium text-slate-900">{property.bankDetails?.accountName || property.ownerName}</p>
+                           </div>
+                           <div className="flex gap-8">
+                              <div>
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">BSB</p>
+                                 <p className="text-lg font-mono font-medium text-slate-900 tracking-wider">{property.bankDetails?.bsb || '--- ---'}</p>
+                              </div>
+                              <div>
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Account</p>
+                                 <p className="text-lg font-mono font-medium text-slate-900 tracking-wider">{property.bankDetails?.accountNumber || '--- ---'}</p>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="mt-8 pt-6 border-t border-slate-50">
+                        <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-widest">Active for Payouts</span>
+                     </div>
+                  </div>
+
+                  {/* Agency Agreement */}
+                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col justify-between">
+                     <div>
+                        <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
+                           <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                           </div>
+                           Agency Agreement
+                        </h3>
+                        <div className="space-y-4">
+                           <div className="flex justify-between items-center pb-4 border-b border-slate-50">
+                              <span className="text-sm font-medium text-slate-500">Management Fee</span>
+                              <span className="text-xl font-black text-slate-900">{property.managementFeePercent}% <span className="text-xs font-bold text-slate-400">+ GST</span></span>
+                           </div>
+                           <div className="flex justify-between items-center pb-4 border-b border-slate-50">
+                              <span className="text-sm font-medium text-slate-500">Letting Fee</span>
+                              <span className="text-sm font-bold text-slate-900">1 Week Rent</span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-slate-500">Authority End</span>
+                              <span className="text-sm font-bold text-slate-900">Continuing</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="mt-8 pt-6 border-t border-slate-50">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Signed: {property.id ? 'Yes' : 'Pending'}</span>
+                     </div>
+                  </div>
+               </div>
             </div>
           )}
 

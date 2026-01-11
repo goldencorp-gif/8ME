@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Property, InspectionFollowUp } from '../types';
 import StatCard from '../components/StatCard';
+import TenantDetailView from '../components/TenantDetailView';
 
 interface TenanciesProps {
   properties: Property[];
@@ -28,6 +29,9 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
 
   // Connection Modal State
   const [connectModal, setConnectModal] = useState<{isOpen: boolean, type: 'missing' | 'success', tenant?: string, provider?: string}>({isOpen: false, type: 'missing'});
+
+  // Tenant Profile View State
+  const [viewingTenant, setViewingTenant] = useState<Property | null>(null);
 
   // Load Partner Settings on Mount
   useEffect(() => {
@@ -327,8 +331,8 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
                       </td>
                       <td className="px-8 py-6 text-right">
                         <button 
-                          onClick={() => onSelectProperty(prop)}
-                          className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-600"
+                          onClick={() => setViewingTenant(prop)}
+                          className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-600 shadow-md"
                         >
                           View Profile
                         </button>
@@ -341,6 +345,19 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
           </table>
         </div>
       </div>
+
+      {/* Tenant Profile View Modal */}
+      {viewingTenant && (
+        <TenantDetailView 
+          property={viewingTenant}
+          onClose={() => setViewingTenant(null)}
+          onOpenProperty={(prop) => {
+             // Close tenant view and bubble up the request to view the main property profile
+             setViewingTenant(null);
+             onSelectProperty(prop);
+          }}
+        />
+      )}
 
       {inspectModal.isOpen && activeModalProp && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
