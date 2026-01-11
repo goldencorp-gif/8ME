@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, UserAccount } from '../types';
 import { getStripeConfig, StripeConfig } from '../services/stripeService';
 
@@ -20,6 +20,9 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
 
   // User Profile State
   const [userProfile, setUserProfile] = useState<UserProfile>(initialProfile);
+  // Local state for avatar preview
+  const [avatarUrl, setAvatarUrl] = useState("https://picsum.photos/100/100");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // New User Form State
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -146,6 +149,17 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
     }, 800);
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const toggleUserStatus = (userId: string) => {
     const updatedUsers = users.map(u => {
       if (u.id === userId) {
@@ -201,9 +215,6 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
           return;
       }
 
-      // We append a query param so when they come back we can simulate a success update (in a real app, webhooks handle this)
-      // Note: Payment links support redirect URLs configured in Stripe Dashboard, 
-      // but for this demo, we assume the user returns to the app manually or via the redirect.
       window.open(url, '_blank');
   };
 
@@ -673,10 +684,20 @@ const Settings: React.FC<SettingsProps> = ({ userProfile: initialProfile, onUpda
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8 animate-in fade-in">
               <div className="flex items-center space-x-4 border-b border-slate-100 pb-6">
                 <div className="relative">
-                  <img src="https://picsum.photos/100/100" className="w-16 h-16 rounded-2xl border-2 border-indigo-100" alt="Profile" />
-                  <button className="absolute -bottom-2 -right-2 bg-slate-900 text-white p-1.5 rounded-lg border-2 border-white hover:bg-indigo-600 transition-colors">
+                  <img src={avatarUrl} className="w-16 h-16 rounded-2xl border-2 border-indigo-100 object-cover" alt="Profile" />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute -bottom-2 -right-2 bg-slate-900 text-white p-1.5 rounded-lg border-2 border-white hover:bg-indigo-600 transition-colors"
+                  >
                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                   </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleAvatarUpload} 
+                  />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Personal Profile</h3>

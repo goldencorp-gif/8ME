@@ -37,7 +37,7 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">{property.tenantName || 'Unknown Tenant'}</h2>
               <div className="flex items-center space-x-4 mt-2 text-sm font-medium text-slate-500">
                  <a href={`mailto:${property.tenantEmail}`} className="hover:text-emerald-600 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
                     {property.tenantEmail || 'No Email'}
                  </a>
                  <a href={`tel:${property.tenantPhone}`} className="hover:text-emerald-600 flex items-center gap-1">
@@ -149,7 +149,12 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
                 <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
                    <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                       <h3 className="font-bold text-slate-900">Lease Documents</h3>
-                      <button className="text-xs font-black uppercase text-indigo-600 hover:text-indigo-800 tracking-widest">Upload New</button>
+                      <button 
+                        onClick={() => alert("Please use the main Property Vault to upload new lease documents.")}
+                        className="text-xs font-black uppercase text-indigo-600 hover:text-indigo-800 tracking-widest"
+                      >
+                        Upload New
+                      </button>
                    </div>
                    <div className="divide-y divide-slate-50">
                       {tenantDocs.length === 0 ? (

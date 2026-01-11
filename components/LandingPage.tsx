@@ -273,7 +273,7 @@ For privacy inquiries, please contact: privacy@8me.com
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                {/* Ad Slot 1 */}
-               <a href="#" onClick={(e) => e.preventDefault()} className="group relative block bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-900/20 transition-all cursor-pointer">
+               <a href="#" onClick={(e) => { e.preventDefault(); alert("SafeGuard Integration: Please contact support to enable insurance referrals."); }} className="group relative block bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-900/20 transition-all cursor-pointer">
                   <div className="absolute top-4 right-4 text-slate-600 group-hover:text-indigo-400">
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                   </div>
@@ -291,7 +291,7 @@ For privacy inquiries, please contact: privacy@8me.com
                </a>
 
                {/* Ad Slot 2 */}
-               <a href="#" onClick={(e) => e.preventDefault()} className="group relative block bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-900/20 transition-all cursor-pointer">
+               <a href="#" onClick={(e) => { e.preventDefault(); alert("ConnectNow Integration: Initiating setup wizard..."); }} className="group relative block bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-900/20 transition-all cursor-pointer">
                   <div className="absolute top-4 right-4 text-slate-600 group-hover:text-emerald-400">
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                   </div>
@@ -309,7 +309,7 @@ For privacy inquiries, please contact: privacy@8me.com
                </a>
 
                {/* Ad Slot 3 */}
-               <a href="#" onClick={(e) => e.preventDefault()} className="group relative block bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-rose-500/50 hover:shadow-lg hover:shadow-rose-900/20 transition-all cursor-pointer">
+               <a href="#" onClick={(e) => { e.preventDefault(); alert("BMT Tax Integration: Linking to depreciation schedule order form."); }} className="group relative block bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-rose-500/50 hover:shadow-lg hover:shadow-rose-900/20 transition-all cursor-pointer">
                   <div className="absolute top-4 right-4 text-slate-600 group-hover:text-rose-400">
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                   </div>
@@ -527,7 +527,7 @@ For privacy inquiries, please contact: privacy@8me.com
              <div className="space-y-6">
                 <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start space-x-4">
                    <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
                    </div>
                    <div>
                       <h4 className="font-bold text-indigo-900">Email Us</h4>
