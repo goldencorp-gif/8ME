@@ -68,10 +68,10 @@ const App: React.FC = () => {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   
+  // Initial Local Team List (Standard Users Only)
   const [users, setUsers] = useState<UserAccount[]>([
     { id: 'u1', name: 'Alex Manager', email: 'alex.manager@8me.com', role: 'Admin', status: 'Active', lastActive: 'Now' },
-    { id: 'u2', name: 'Sarah Smith', email: 'sarah@8me.com', role: 'Manager', status: 'Active', lastActive: '2h ago' },
-    { id: 'u3', name: 'System Overlord', email: 'admin@master.com', role: 'Master', status: 'Active', lastActive: 'Now' }
+    { id: 'u2', name: 'Sarah Smith', email: 'sarah@8me.com', role: 'Manager', status: 'Active', lastActive: '2h ago' }
   ]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

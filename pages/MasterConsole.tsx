@@ -1,15 +1,24 @@
+
 import React, { useState } from 'react';
-import { Agency } from '../types';
+import { Agency, UserAccount } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MasterConsoleProps {
   onImpersonate: (agency: Agency) => void;
 }
 
 const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
+  const { role, resetLocalUserPassword } = useAuth();
   const [agencies, setAgencies] = useState<Agency[]>([
     { id: 'a1', name: 'Apex Real Estate', contactEmail: 'director@apex.com', status: 'Active', subscriptionPlan: 'Growth', usersCount: 4, licenseLimit: 5, propertiesCount: 145, joinedDate: '2023-11-01', mrr: 199.99 },
     { id: 'a2', name: 'Coastal Living', contactEmail: 'sarah@coastal.com', status: 'Trial', subscriptionPlan: 'Starter', usersCount: 1, licenseLimit: 1, propertiesCount: 12, joinedDate: '2024-05-10', mrr: 0 },
   ]);
+
+  // Simulated Local Users (In reality, this would query the DB of the current instance)
+  const localUsers: UserAccount[] = [
+      { id: 'u1', name: 'Alex Manager', email: 'alex.manager@8me.com', role: 'Admin', status: 'Active', lastActive: 'Now' },
+      { id: 'u2', name: 'Sarah Smith', email: 'sarah@8me.com', role: 'Manager', status: 'Active', lastActive: '2h ago' }
+  ];
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newAgency, setNewAgency] = useState({
@@ -17,6 +26,18 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
     email: '',
     plan: 'Starter' as 'Starter' | 'Growth' | 'Enterprise'
   });
+
+  if (role !== 'Master') {
+      return (
+          <div className="flex items-center justify-center h-[60vh] flex-col text-center">
+              <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 mb-4">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900">Access Denied</h2>
+              <p className="text-slate-500 mt-2">You do not have permission to view the Master Console.</p>
+          </div>
+      );
+  }
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +58,15 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
     setNewAgency({ name: '', email: '', plan: 'Starter' });
   };
 
+  const handleResetPassword = async (email: string) => {
+      if (confirm(`Are you sure you want to forcibly reset the password for ${email}?`)) {
+          await resetLocalUserPassword(email);
+          alert(`Password reset link sent to ${email} (Simulated).`);
+      }
+  };
+
   const calculatedMrr = newAgency.plan === 'Starter' ? 54.99 : newAgency.plan === 'Growth' ? 199.99 : 1688.00;
   const listingCap = newAgency.plan === 'Starter' ? 50 : newAgency.plan === 'Growth' ? 200 : 'Unlimited';
-
   const totalRevenue = agencies.reduce((acc, a) => acc + a.mrr, 0);
 
   return (
@@ -72,7 +99,56 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
          </div>
       </div>
 
+      {/* Local User Override Section */}
+      <div className="bg-rose-50 rounded-[2rem] border border-rose-100 shadow-sm overflow-hidden p-8">
+          <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-rose-200 text-rose-700 rounded-lg">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <div>
+                  <h3 className="text-xl font-bold text-rose-900">Local User Override</h3>
+                  <p className="text-xs text-rose-700">Manage accounts on this device instance.</p>
+              </div>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-rose-100 overflow-hidden">
+              <table className="w-full text-left">
+                  <thead className="bg-rose-50/50 border-b border-rose-100">
+                      <tr>
+                          <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest">User</th>
+                          <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest">Role</th>
+                          <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest text-right">Action</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-rose-50">
+                      {localUsers.map(user => (
+                          <tr key={user.id}>
+                              <td className="px-6 py-4">
+                                  <p className="font-bold text-slate-900">{user.name}</p>
+                                  <p className="text-xs text-slate-500">{user.email}</p>
+                              </td>
+                              <td className="px-6 py-4">
+                                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{user.role}</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                  <button 
+                                    onClick={() => handleResetPassword(user.email)}
+                                    className="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline"
+                                  >
+                                      Reset Password
+                                  </button>
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+         <div className="px-8 py-6 border-b border-slate-100">
+             <h3 className="font-bold text-slate-900">Provisioned Tenants</h3>
+         </div>
          <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-200">
                <tr>

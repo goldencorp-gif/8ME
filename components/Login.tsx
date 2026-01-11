@@ -144,11 +144,11 @@ const Login: React.FC = () => {
             </div>
           )}
 
-          {/* Demo Hint */}
-          <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
-             <p className="font-bold uppercase text-xs tracking-widest mb-1 text-indigo-500">Demo Access</p>
+          {/* Demo Hint - Client View Only */}
+          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-600">
+             <p className="font-bold uppercase text-xs tracking-widest mb-1 text-slate-400">Demo Agency Login</p>
              <p><strong>Email:</strong> alex.manager@8me.com</p>
-             <p><strong>Password:</strong> (any)</p>
+             <p><strong>Password:</strong> (Any)</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -161,7 +161,7 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={inputClass}
-                  placeholder="alex.manager@8me.com"
+                  placeholder="name@agency.com"
                 />
               </div>
               <div>
@@ -215,7 +215,7 @@ const Login: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
                <div>
                   <h3 className="text-2xl font-bold text-slate-900">Reset Password</h3>
-                  <p className="text-slate-500 text-sm mt-1">We'll send you a secure link to reset it.</p>
+                  <p className="text-slate-500 text-sm mt-1">Contact 8ME Support for security overrides.</p>
                </div>
                <button onClick={() => setShowForgotPasswordModal(false)} className="text-slate-400 hover:text-slate-600">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -225,10 +225,10 @@ const Login: React.FC = () => {
             {resetSent ? (
               <div className="py-12 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4">
                 <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
                 </div>
-                <h4 className="text-xl font-bold text-slate-900">Check your inbox!</h4>
-                <p className="text-slate-500 mt-2 max-w-xs">We've sent a password reset link to <span className="font-bold text-indigo-600">{forgotPasswordEmail}</span>.</p>
+                <h4 className="text-xl font-bold text-slate-900">Request Sent!</h4>
+                <p className="text-slate-500 mt-2 max-w-xs">Our support team will contact you shortly to verify your identity.</p>
               </div>
             ) : (
               <form onSubmit={handleResetSubmit} className="space-y-6">
@@ -244,13 +244,19 @@ const Login: React.FC = () => {
                     />
                  </div>
                  
+                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                    <p className="text-xs text-slate-500 italic text-center">
+                        For security reasons, password resets on local-first accounts require administrator verification.
+                    </p>
+                 </div>
+
                  <div className="pt-2">
                    <button 
                     type="submit"
                     disabled={loading}
                     className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-xl transition-all active:scale-95 flex items-center justify-center"
                    >
-                     {loading ? 'Sending...' : 'Send Reset Link'}
+                     {loading ? 'Sending...' : 'Request Support Reset'}
                    </button>
                  </div>
               </form>

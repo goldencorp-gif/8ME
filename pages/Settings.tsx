@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserProfile, UserAccount } from '../types';
 
@@ -79,11 +80,15 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
         )}
 
         {activeTab === 'team' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-900">Team Management</h3>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Agency Team</h3>
+                <p className="text-sm text-slate-500">Manage access for your staff.</p>
+              </div>
               <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-indigo-700">Invite User</button>
             </div>
+            
             <div className="divide-y divide-slate-100">
               {users.map(u => (
                 <div key={u.id} className="py-4 flex justify-between items-center">
@@ -95,7 +100,7 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className="text-xs font-bold bg-slate-100 px-2 py-1 rounded uppercase tracking-wider text-slate-600">{u.role}</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${u.role === 'Admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>{u.role}</span>
                     <button className="text-slate-400 hover:text-indigo-600 text-xs font-bold">Edit</button>
                   </div>
                 </div>

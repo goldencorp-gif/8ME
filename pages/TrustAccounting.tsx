@@ -142,24 +142,29 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
     const reader = new FileReader();
     reader.onloadend = async () => {
         const base64 = (reader.result as string).split(',')[1];
-        const extractedLines = await parseBankStatement(base64);
-        
-        if (extractedLines && extractedLines.length > 0) {
-            const newLines: BankLine[] = extractedLines.map((l: any, i: number) => ({
-                id: `ai-scan-${Date.now()}-${i}`,
-                date: l.date,
-                description: l.description,
-                amount: l.amount,
-                type: l.type,
-                matchStatus: 'Unmatched'
-            }));
-            setBankLines(prev => [...prev, ...newLines]);
-            alert(`AI successfully extracted ${newLines.length} transactions from the statement.`);
-        } else {
-            alert("Could not extract transactions. Please ensure the image is clear and contains a visible transaction table.");
+        try {
+            const extractedLines = await parseBankStatement(base64);
+            
+            if (extractedLines && extractedLines.length > 0) {
+                const newLines: BankLine[] = extractedLines.map((l: any, i: number) => ({
+                    id: `ai-scan-${Date.now()}-${i}`,
+                    date: l.date,
+                    description: l.description,
+                    amount: l.amount,
+                    type: l.type,
+                    matchStatus: 'Unmatched'
+                }));
+                setBankLines(prev => [...prev, ...newLines]);
+                alert(`AI successfully extracted ${newLines.length} transactions.\n\nPlease review them in the Bank Feed below and match them to property ledgers.`);
+            } else {
+                alert("Could not extract transactions. Please ensure the image is clear, well-lit, and contains a visible transaction table.");
+            }
+        } catch (error) {
+            alert("An error occurred while analyzing the statement. Please try again.");
+        } finally {
+            setIsScanning(false);
+            if(scanInputRef.current) scanInputRef.current.value = '';
         }
-        setIsScanning(false);
-        if(scanInputRef.current) scanInputRef.current.value = '';
     };
     reader.readAsDataURL(file);
   };
@@ -529,9 +534,9 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
         {/* Cashbook View */}
         {activeView === 'cashbook' && (
           <div className="p-8 space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                <h3 className="font-bold text-slate-900">Recent Transactions</h3>
-               <div className="flex space-x-3">
+               <div className="flex flex-wrap gap-3">
                   {/* NEW SCAN BUTTON: Quick Access */}
                   <button 
                     onClick={() => scanInputRef.current?.click()} 
