@@ -333,7 +333,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
-            className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+            className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-1 focus:ring-indigo-500 outline-none"
             />
             <button 
             onClick={handleTextSubmit}
