@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Agency, UserAccount } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { db } from '../services/db';
 
 interface MasterConsoleProps {
   onImpersonate: (agency: Agency) => void;
@@ -14,11 +15,14 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
     { id: 'a2', name: 'Coastal Living', contactEmail: 'sarah@coastal.com', status: 'Trial', subscriptionPlan: 'Starter', usersCount: 1, licenseLimit: 1, propertiesCount: 12, joinedDate: '2024-05-10', mrr: 0 },
   ]);
 
-  // Simulated Local Users (In reality, this would query the DB of the current instance)
-  const localUsers: UserAccount[] = [
-      { id: 'u1', name: 'Alex Manager', email: 'alex.manager@8me.com', role: 'Admin', status: 'Active', lastActive: 'Now' },
-      { id: 'u2', name: 'Sarah Smith', email: 'sarah@8me.com', role: 'Manager', status: 'Active', lastActive: '2h ago' }
-  ];
+  // Load Real Local Users from DB
+  const [localUsers, setLocalUsers] = useState<UserAccount[]>([]);
+
+  useEffect(() => {
+      db.users.list().then(users => {
+          setLocalUsers(users);
+      });
+  }, []);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newAgency, setNewAgency] = useState({
@@ -59,9 +63,8 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
   };
 
   const handleResetPassword = async (email: string) => {
-      if (confirm(`Are you sure you want to forcibly reset the password for ${email}?`)) {
+      if (confirm(`MASTER OVERRIDE:\n\nAre you sure you want to forcibly reset the password for ${email}?`)) {
           await resetLocalUserPassword(email);
-          alert(`Password reset link sent to ${email} (Simulated).`);
       }
   };
 
@@ -112,36 +115,42 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
           </div>
           
           <div className="bg-white rounded-xl border border-rose-100 overflow-hidden">
-              <table className="w-full text-left">
-                  <thead className="bg-rose-50/50 border-b border-rose-100">
-                      <tr>
-                          <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest">User</th>
-                          <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest">Role</th>
-                          <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest text-right">Action</th>
-                      </tr>
-                  </thead>
-                  <tbody className="divide-y divide-rose-50">
-                      {localUsers.map(user => (
-                          <tr key={user.id}>
-                              <td className="px-6 py-4">
-                                  <p className="font-bold text-slate-900">{user.name}</p>
-                                  <p className="text-xs text-slate-500">{user.email}</p>
-                              </td>
-                              <td className="px-6 py-4">
-                                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{user.role}</span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                  <button 
-                                    onClick={() => handleResetPassword(user.email)}
-                                    className="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline"
-                                  >
-                                      Reset Password
-                                  </button>
-                              </td>
+              {localUsers.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 italic text-sm">
+                      No local users found on this device.
+                  </div>
+              ) : (
+                  <table className="w-full text-left">
+                      <thead className="bg-rose-50/50 border-b border-rose-100">
+                          <tr>
+                              <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest">User</th>
+                              <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest">Role</th>
+                              <th className="px-6 py-3 text-xs font-black uppercase text-rose-400 tracking-widest text-right">Action</th>
                           </tr>
-                      ))}
-                  </tbody>
-              </table>
+                      </thead>
+                      <tbody className="divide-y divide-rose-50">
+                          {localUsers.map(user => (
+                              <tr key={user.id}>
+                                  <td className="px-6 py-4">
+                                      <p className="font-bold text-slate-900">{user.name}</p>
+                                      <p className="text-xs text-slate-500">{user.email}</p>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{user.role}</span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                      <button 
+                                        onClick={() => handleResetPassword(user.email)}
+                                        className="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline"
+                                      >
+                                          Reset Password
+                                      </button>
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              )}
           </div>
       </div>
 

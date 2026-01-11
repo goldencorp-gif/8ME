@@ -68,11 +68,8 @@ const App: React.FC = () => {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   
-  // Initial Local Team List (Standard Users Only)
-  const [users, setUsers] = useState<UserAccount[]>([
-    { id: 'u1', name: 'Alex Manager', email: 'alex.manager@8me.com', role: 'Admin', status: 'Active', lastActive: 'Now' },
-    { id: 'u2', name: 'Sarah Smith', email: 'sarah@8me.com', role: 'Manager', status: 'Active', lastActive: '2h ago' }
-  ]);
+  // Local Team List (Loaded from DB)
+  const [users, setUsers] = useState<UserAccount[]>([]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -90,11 +87,13 @@ const App: React.FC = () => {
             db.transactions.list(),
             db.maintenance.list(),
             db.calendar.list(),
-            db.history.list() // Load history logic just to initialize folder if missing
-        ]).then(([txs, tasks, events]) => {
+            db.history.list(),
+            db.users.list() // Load local users
+        ]).then(([txs, tasks, events, hist, localUsers]) => {
             setTransactions(txs);
             setMaintenanceTasks(tasks);
             setCalendarEvents(events);
+            setUsers(localUsers);
             setLoadingData(false);
         }).catch(err => {
             console.error("Data loading error:", err);

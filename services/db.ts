@@ -1,5 +1,5 @@
 
-import { Property, Transaction, MaintenanceTask, CalendarEvent, LogbookEntry, HistoryRecord } from '../types';
+import { Property, Transaction, MaintenanceTask, CalendarEvent, LogbookEntry, HistoryRecord, UserAccount } from '../types';
 import { MOCK_PROPERTIES, MOCK_TRANSACTIONS, MOCK_MAINTENANCE } from '../constants';
 
 // --- DATA LAYER (BYOD Support) ---
@@ -68,6 +68,39 @@ export const getDbConnectionInfo = () => {
 };
 
 export const db = {
+  // NEW: Local User Management
+  users: {
+    list: () => dbRead<UserAccount[]>('users', []), // Default to empty to trigger setup flow
+    add: async (user: UserAccount) => {
+        const list = await dbRead<UserAccount[]>('users', []);
+        await dbWrite('users', [...list, user]);
+    },
+    update: async (user: UserAccount) => {
+        const list = await dbRead<UserAccount[]>('users', []);
+        const updated = list.map(u => u.email === user.email ? user : u);
+        await dbWrite('users', updated);
+    },
+    delete: async (id: string) => {
+        const list = await dbRead<UserAccount[]>('users', []);
+        await dbWrite('users', list.filter(u => u.id !== id));
+    },
+    // Master Override Feature
+    resetPassword: async (email: string, newHash: string) => {
+        const list = await dbRead<UserAccount[]>('users', []);
+        const updated = list.map(u => {
+            if (u.email === email) {
+                // In a real app we'd handle the hash update here
+                // For this structure, we assume the 'passwordHash' is stored in metadata or separate
+                return { ...u, lastActive: 'Password Reset by Master' };
+            }
+            return u;
+        });
+        await dbWrite('users', updated);
+        // Also update the separate auth store if we were storing secrets separately
+        // (Simplified for this demo: secrets managed in AuthContext via same storage key logic)
+    }
+  },
+
   properties: {
     list: () => dbRead<Property[]>('properties', MOCK_PROPERTIES),
     save: async (property: Property) => {
@@ -92,13 +125,8 @@ export const db = {
       const newItems = Array.isArray(txOrList) ? txOrList : [txOrList];
       await dbWrite('transactions', [...newItems, ...list]);
     },
-    // IMMUTABILITY ENFORCEMENT:
-    // We intentionally make this a no-op or partial archive. 
-    // Trust transactions should NEVER be deleted, only reversed.
-    // Even if a property is deleted, the ledger history must remain for audit purposes.
     deleteLinkedTo: async (identifier: string) => {
       console.log(`[Audit Compliance] Preserving ledger history for ${identifier}. Transactions are immutable.`);
-      // No deletion occurs.
       return; 
     }
   },
@@ -137,7 +165,6 @@ export const db = {
 
   logbook: {
     list: () => dbRead<LogbookEntry[]>('logbook', [
-        // Default Mock Log
         { id: 'log-1', date: new Date().toISOString().split('T')[0], vehicle: 'Audi Q5 (ABC-123)', startOdo: 45000, endOdo: 45012, distance: 12, purpose: 'Inspection: 123 Ocean View', category: 'Business', driver: 'Current User' }
     ]),
     add: async (entry: LogbookEntry) => {

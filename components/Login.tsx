@@ -3,9 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { login, registerLocalUser, localUserCount } = useAuth();
+  
+  // View State
+  const [mode, setMode] = useState<'login' | 'setup'>('login');
+  
+  // Form States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -13,15 +20,12 @@ const Login: React.FC = () => {
   const [agencyUrl, setAgencyUrl] = useState('');
   const [customBg, setCustomBg] = useState('');
 
-  // Contact Modal State
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', agency: '', phone: '' });
-  const [contactSent, setContactSent] = useState(false);
-
-  // Forgot Password State
-  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-  const [resetSent, setResetSent] = useState(false);
+  // Auto-switch to Setup Mode if no users exist
+  useEffect(() => {
+      if (localUserCount === 0) {
+          setMode('setup');
+      }
+  }, [localUserCount]);
 
   useEffect(() => {
     // Check if agency URL is configured in settings
@@ -43,43 +47,25 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const result = await login(email, password);
-      if (!result.success) {
-        setError(result.error || 'Login failed');
+      if (mode === 'setup') {
+          if (password.length < 6) {
+              setError("Password must be at least 6 characters");
+              setLoading(false);
+              return;
+          }
+          await registerLocalUser(name, email, password);
+          // Register automatically logs in
+      } else {
+          const result = await login(email, password);
+          if (!result.success) {
+            setError(result.error || 'Login failed');
+          }
       }
     } catch (err) {
       setError('An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simulate API call to CRM
-    setTimeout(() => {
-      setContactSent(true);
-      setTimeout(() => {
-        setContactSent(false);
-        setShowContactModal(false);
-        setContactForm({ name: '', email: '', agency: '', phone: '' });
-      }, 3000);
-    }, 1000);
-  };
-
-  const handleResetSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-        setLoading(false);
-        setResetSent(true);
-        setTimeout(() => {
-            setResetSent(false);
-            setShowForgotPasswordModal(false);
-            setForgotPasswordEmail('');
-        }, 3000);
-    }, 1500);
   };
 
   const inputClass = "w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-bold text-slate-900 transition-all placeholder:text-slate-300 text-sm";
@@ -105,13 +91,6 @@ const Login: React.FC = () => {
               </div>
               <h1 className="text-xl font-bold tracking-tight">8<span className="text-indigo-400">ME</span></h1>
             </div>
-            
-            {agencyUrl && (
-                <a href={agencyUrl} className="flex items-center text-white/70 hover:text-white transition-colors text-sm font-bold bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                    Back to Agency Site
-                </a>
-            )}
           </div>
 
           <div>
@@ -133,8 +112,17 @@ const Login: React.FC = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-24 bg-white animate-in slide-in-from-right duration-700">
         <div className="w-full max-w-md space-y-8">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome back</h2>
-            <p className="mt-2 text-slate-500">Please sign in to access your portfolio.</p>
+            {mode === 'setup' ? (
+                <>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Setup Agency Access</h2>
+                    <p className="mt-2 text-slate-500">Create your local administrator account to begin.</p>
+                </>
+            ) : (
+                <>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome back</h2>
+                    <p className="mt-2 text-slate-500">Please sign in to your local workspace.</p>
+                </>
+            )}
           </div>
 
           {error && (
@@ -144,15 +132,21 @@ const Login: React.FC = () => {
             </div>
           )}
 
-          {/* Demo Hint - Client View Only */}
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-600">
-             <p className="font-bold uppercase text-xs tracking-widest mb-1 text-slate-400">Demo Agency Login</p>
-             <p><strong>Email:</strong> alex.manager@8me.com</p>
-             <p><strong>Password:</strong> (Any)</p>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
+              {mode === 'setup' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g. Agency Principal"
+                    />
+                  </div>
+              )}
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
                 <input 
@@ -172,7 +166,7 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={inputClass}
-                  placeholder="••••••••"
+                  placeholder={mode === 'setup' ? "Create a secure password" : "••••••••"}
                 />
               </div>
             </div>
@@ -182,7 +176,9 @@ const Login: React.FC = () => {
                 <input type="checkbox" className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                 <span className="font-bold text-slate-500">Remember me</span>
               </label>
-              <button type="button" onClick={() => setShowForgotPasswordModal(true)} className="font-bold text-indigo-600 hover:text-indigo-800">Forgot password?</button>
+              {mode === 'login' && (
+                  <button type="button" onClick={() => alert("Please contact the Master Administrator (Support) to reset your local account password.")} className="font-bold text-indigo-600 hover:text-indigo-800">Forgot password?</button>
+              )}
             </div>
 
             <button 
@@ -196,160 +192,34 @@ const Login: React.FC = () => {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
-                'Sign In'
+                mode === 'setup' ? 'Create Agency Account' : 'Sign In'
               )}
             </button>
           </form>
 
-          <div className="pt-6 text-center text-sm font-bold text-slate-400">
-            Don't have an account? <button onClick={() => setShowContactModal(true)} className="text-indigo-600 hover:text-indigo-800 hover:underline">Contact Sales</button>
-          </div>
+          {/* Toggle for Demo Users who skipped setup but want to create new later, or Reset */}
+          {localUserCount > 0 && mode === 'login' && (
+              <div className="pt-6 text-center">
+                  <button 
+                    onClick={() => setMode('setup')} 
+                    className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                  >
+                      Register New User on this Device
+                  </button>
+              </div>
+          )}
+          {mode === 'setup' && localUserCount > 0 && (
+              <div className="pt-6 text-center">
+                  <button 
+                    onClick={() => setMode('login')} 
+                    className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                  >
+                      Back to Login
+                  </button>
+              </div>
+          )}
         </div>
       </div>
-
-      {/* Forgot Password Modal */}
-      {showForgotPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm animate-in fade-in" onClick={() => setShowForgotPasswordModal(false)} />
-          <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
-            <div className="flex justify-between items-center mb-6">
-               <div>
-                  <h3 className="text-2xl font-bold text-slate-900">Reset Password</h3>
-                  <p className="text-slate-500 text-sm mt-1">Contact 8ME Support for security overrides.</p>
-               </div>
-               <button onClick={() => setShowForgotPasswordModal(false)} className="text-slate-400 hover:text-slate-600">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-               </button>
-            </div>
-
-            {resetSent ? (
-              <div className="py-12 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4">
-                <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
-                </div>
-                <h4 className="text-xl font-bold text-slate-900">Request Sent!</h4>
-                <p className="text-slate-500 mt-2 max-w-xs">Our support team will contact you shortly to verify your identity.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleResetSubmit} className="space-y-6">
-                 <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Registered Email</label>
-                    <input 
-                      required 
-                      type="email" 
-                      placeholder="name@company.com"
-                      className={inputClass}
-                      value={forgotPasswordEmail}
-                      onChange={e => setForgotPasswordEmail(e.target.value)}
-                    />
-                 </div>
-                 
-                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                    <p className="text-xs text-slate-500 italic text-center">
-                        For security reasons, password resets on local-first accounts require administrator verification.
-                    </p>
-                 </div>
-
-                 <div className="pt-2">
-                   <button 
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-xl transition-all active:scale-95 flex items-center justify-center"
-                   >
-                     {loading ? 'Sending...' : 'Request Support Reset'}
-                   </button>
-                 </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Sales Contact Modal */}
-      {showContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm animate-in fade-in" onClick={() => setShowContactModal(false)} />
-          <div className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
-            <div className="flex justify-between items-center mb-6">
-               <div>
-                  <h3 className="text-2xl font-bold text-slate-900">Request Access</h3>
-                  <p className="text-slate-500 text-sm mt-1">Our team will reach out to schedule a demo.</p>
-               </div>
-               <button onClick={() => setShowContactModal(false)} className="text-slate-400 hover:text-slate-600">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-               </button>
-            </div>
-
-            {contactSent ? (
-              <div className="py-12 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4">
-                <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <h4 className="text-xl font-bold text-slate-900">Request Sent!</h4>
-                <p className="text-slate-500 mt-2 max-w-xs">Thanks {contactForm.name}. A sales representative will contact {contactForm.email} shortly.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleContactSubmit} className="space-y-4">
-                 <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
-                    <input 
-                      required 
-                      type="text" 
-                      placeholder="e.g. John Doe"
-                      className={inputClass}
-                      value={contactForm.name}
-                      onChange={e => setContactForm({...contactForm, name: e.target.value})}
-                    />
-                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Work Email</label>
-                      <input 
-                        required 
-                        type="email" 
-                        placeholder="john@agency.com"
-                        className={inputClass}
-                        value={contactForm.email}
-                        onChange={e => setContactForm({...contactForm, email: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Phone</label>
-                      <input 
-                        required 
-                        type="tel" 
-                        placeholder="+61 400..."
-                        className={inputClass}
-                        value={contactForm.phone}
-                        onChange={e => setContactForm({...contactForm, phone: e.target.value})}
-                      />
-                    </div>
-                 </div>
-                 <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Agency Name</label>
-                    <input 
-                      required 
-                      type="text" 
-                      placeholder="e.g. Apex Real Estate"
-                      className={inputClass}
-                      value={contactForm.agency}
-                      onChange={e => setContactForm({...contactForm, agency: e.target.value})}
-                    />
-                 </div>
-                 
-                 <div className="pt-2">
-                   <button 
-                    type="submit"
-                    className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-slate-800 shadow-xl transition-all active:scale-95"
-                   >
-                     Submit Inquiry
-                   </button>
-                 </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
