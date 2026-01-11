@@ -236,6 +236,12 @@ const App: React.FC = () => {
     showToast('Calendar updated');
   };
 
+  const handleUpdateCalendarEvent = async (event: CalendarEvent) => {
+    await db.calendar.update(event);
+    setCalendarEvents(prev => prev.map(e => e.id === event.id ? event : e));
+    // Quiet update, maybe for checkbox
+  };
+
   const handleDeleteCalendarEvent = async (eventId: string) => {
     // Only manual events (id starting with 'evt-' or 'voice-') are stored in db.calendar
     if (eventId.startsWith('evt-') || eventId.startsWith('voice-')) {
@@ -270,7 +276,12 @@ const App: React.FC = () => {
 
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard properties={properties} maintenanceTasks={maintenanceTasks} onOpenAddModal={() => setIsAddModalOpen(true)} />;
+        return <Dashboard 
+                  properties={properties} 
+                  maintenanceTasks={maintenanceTasks} 
+                  calendarEvents={calendarEvents}
+                  onOpenAddModal={() => setIsAddModalOpen(true)} 
+               />;
       case 'master-console':
         return <MasterConsole onImpersonate={handleImpersonate} />;
       case 'ai-assistant':
@@ -278,7 +289,7 @@ const App: React.FC = () => {
       case 'tenancies':
         return <Tenancies 
                   properties={properties} 
-                  maintenanceTasks={maintenanceTasks} // Added maintenanceTasks prop
+                  maintenanceTasks={maintenanceTasks} 
                   onSelectProperty={setSelectedProperty} 
                   onEditProperty={handleEditProperty} 
                   onUpdateProperty={handleAddOrUpdateProperty} 
@@ -294,11 +305,12 @@ const App: React.FC = () => {
                   maintenanceTasks={maintenanceTasks} 
                   manualEvents={calendarEvents} 
                   onAddEvent={handleAddCalendarEvent}
+                  onUpdateEvent={handleUpdateCalendarEvent}
                   onDeleteEvent={handleDeleteCalendarEvent}
                   onRecordHistory={handleRecordHistory}
                />;
       case 'logbook':
-        return <Logbook />; // New Route
+        return <Logbook calendarEvents={calendarEvents} />; 
       case 'settings':
         return <Settings userProfile={user || { name: 'Demo User', email: 'demo@8me.com', title: 'Manager', phone: '' }} onUpdateProfile={updateProfile} users={users} onUpdateUsers={setUsers} />;
       case 'properties':

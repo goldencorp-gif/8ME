@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import StatCard from '../components/StatCard';
 import FeatureGuide from '../components/FeatureGuide';
-import { Property, MaintenanceTask } from '../types';
+import { Property, MaintenanceTask, CalendarEvent } from '../types';
 
 interface DashboardProps {
   properties: Property[];
   maintenanceTasks: MaintenanceTask[];
+  calendarEvents?: CalendarEvent[];
   onOpenAddModal: () => void;
 }
 
@@ -19,7 +20,7 @@ interface NotificationItem {
   category: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ properties, maintenanceTasks, onOpenAddModal }) => {
+const Dashboard: React.FC<DashboardProps> = ({ properties, maintenanceTasks, calendarEvents = [], onOpenAddModal }) => {
   const [showGuide, setShowGuide] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
@@ -47,6 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ properties, maintenanceTasks, onO
   const notifications = useMemo(() => {
     const list: NotificationItem[] = [];
     const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
 
     // 1. Arrears Alerts
     properties.filter(p => p.status === 'Arrears').forEach(p => {
@@ -123,9 +125,23 @@ const Dashboard: React.FC<DashboardProps> = ({ properties, maintenanceTasks, onO
       }
     });
 
+    // 6. Logbook Reminder (End of Day)
+    // Check if there are unchecked events for today and time is after 3PM (simple heuristic)
+    const uncheckedToday = calendarEvents.filter(e => e.date === todayStr && !e.checkedOut);
+    if (uncheckedToday.length > 0) {
+        list.push({
+            id: `logbook-reminder-${todayStr}`,
+            type: 'info',
+            title: 'Logbook Reminder',
+            message: `You have ${uncheckedToday.length} unchecked appointments today. Verify them in Schedule to auto-log your travel.`,
+            time: 'End of Day',
+            category: 'Logbook'
+        });
+    }
+
     // Filter out dismissed notifications
     return list.filter(n => !dismissedIds.includes(n.id));
-  }, [properties, maintenanceTasks, dismissedIds]);
+  }, [properties, maintenanceTasks, dismissedIds, calendarEvents]);
 
   const handleDismissAll = () => {
     const currentIds = notifications.map(n => n.id);

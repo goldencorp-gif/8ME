@@ -664,3 +664,46 @@ export const generateTaskSuggestions = async (taskTitle: string, taskType: strin
     return "Unable to generate suggestions at this time.";
   }
 };
+
+export const generateLogbookEntriesFromSchedule = async (events: any[], officeAddress: string = 'Agency Office') => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    // Filter only events that have a property address
+    const tripPoints = events.filter(e => e.propertyAddress && e.propertyAddress !== 'General / Office');
+    
+    if (tripPoints.length === 0) return [];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `You are an intelligent Vehicle Logbook Assistant.
+      Context: A property manager has visited the following properties today.
+      They started at "${officeAddress}".
+      They visited these locations in order of time:
+      ${JSON.stringify(tripPoints.map(e => ({ time: e.time, address: e.propertyAddress, purpose: e.title })))}
+      Finally, they returned to "${officeAddress}".
+
+      Task: Calculate logical trip segments and estimate driving distances (in km) for a vehicle logbook.
+      Assume realistic city driving distances between these points.
+      
+      Return a JSON ARRAY of log entries (NO MARKDOWN). Each entry must match this shape:
+      {
+        "vehicle": "Primary Vehicle",
+        "date": "${tripPoints[0].date}",
+        "purpose": "Trip Purpose (e.g. Inspection at 123 Street)",
+        "category": "Business",
+        "distance": number (estimated km)
+      }
+      
+      Example: Office -> Point A (Trip 1). Point A -> Point B (Trip 2). Point B -> Office (Trip 3).`,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+    
+    return JSON.parse(response.text || '[]');
+  } catch (error) {
+    console.error("Logbook Gen Error:", error);
+    return [];
+  }
+};

@@ -1,13 +1,19 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogbookEntry } from '../types';
+import { LogbookEntry, CalendarEvent } from '../types';
 import { db } from '../services/db';
+import { generateLogbookEntriesFromSchedule } from '../services/geminiService';
 import StatCard from '../components/StatCard';
 
-const Logbook: React.FC = () => {
+interface LogbookProps {
+    calendarEvents?: CalendarEvent[];
+}
+
+const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   
   // Stats State
   const [vehicleName, setVehicleName] = useState('Audi Q5 (ABC-123)');
@@ -81,6 +87,58 @@ const Logbook: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  const handleSyncSchedule = async () => {
+      // Find today's verified (checked out) events
+      const today = new Date().toISOString().split('T')[0];
+      
+      const verifiedEvents = calendarEvents.filter(e => {
+          return e.date === today && e.checkedOut;
+      }).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+      if (verifiedEvents.length === 0) {
+          alert("No verified (checked-out) appointments found for today.\n\nPlease go to Schedule and tick the 'Check-Out' box on your appointments first.");
+          return;
+      }
+
+      setSyncing(true);
+      try {
+          // Get last odometer to continue sequence
+          let currentOdo = getLastEndOdo();
+          
+          // Call AI
+          const aiEntries = await generateLogbookEntriesFromSchedule(verifiedEvents, 'Agency Office');
+          
+          if (aiEntries.length > 0) {
+              for (const entry of aiEntries) {
+                  // Adjust AI estimated distance to consecutive odometer readings
+                  const dist = Math.ceil(entry.distance);
+                  const newLog: LogbookEntry = {
+                      id: `log-ai-${Date.now()}-${Math.random()}`,
+                      date: today,
+                      vehicle: vehicleName,
+                      startOdo: currentOdo,
+                      endOdo: currentOdo + dist,
+                      distance: dist,
+                      purpose: entry.purpose,
+                      category: 'Business',
+                      driver: 'AI Auto-Log'
+                  };
+                  await db.logbook.add(newLog);
+                  currentOdo += dist;
+              }
+              await loadLogbook();
+              alert(`Success! Generated ${aiEntries.length} logbook entries based on your schedule.`);
+          } else {
+              alert("AI could not calculate a valid route. Please ensure appointments have valid addresses.");
+          }
+      } catch (e) {
+          console.error(e);
+          alert("Failed to sync schedule.");
+      } finally {
+          setSyncing(false);
+      }
+  };
+
   const handleExport = () => {
     const headers = "Date,Vehicle,Driver,Purpose,Category,Start Odo,End Odo,Distance (km)\n";
     const rows = entries.map(e => 
@@ -127,6 +185,20 @@ const Logbook: React.FC = () => {
                 <p className="text-slate-500 mt-1">ATO Compliant travel records for {vehicleName}.</p>
             </div>
             <div className="flex space-x-3">
+                {/* AI Sync Button */}
+                <button 
+                    onClick={handleSyncSchedule}
+                    disabled={syncing}
+                    className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-all flex items-center gap-2"
+                >
+                    {syncing ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    )}
+                    Sync Schedule
+                </button>
+
                 <button 
                     onClick={handleExport}
                     className="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all"
@@ -195,6 +267,7 @@ const Logbook: React.FC = () => {
                               </td>
                               <td className="px-8 py-5 font-bold text-slate-900 text-sm">
                                  {entry.purpose}
+                                 {entry.driver === 'AI Auto-Log' && <span className="ml-2 text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Auto-Logged</span>}
                               </td>
                               <td className="px-8 py-5">
                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${entry.category === 'Business' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>

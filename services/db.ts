@@ -183,6 +183,11 @@ export const db = {
       const list = await dbRead<CalendarEvent[]>('calendar', []);
       await dbWrite('calendar', [...list, event]);
     },
+    update: async (event: CalendarEvent) => {
+      const list = await dbRead<CalendarEvent[]>('calendar', []);
+      const updated = list.map(e => e.id === event.id ? event : e);
+      await dbWrite('calendar', updated);
+    },
     delete: async (id: string) => {
       const list = await dbRead<CalendarEvent[]>('calendar', []);
       await dbWrite('calendar', list.filter(e => e.id !== id));

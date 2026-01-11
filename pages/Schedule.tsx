@@ -9,6 +9,7 @@ interface ScheduleProps {
   maintenanceTasks?: MaintenanceTask[];
   manualEvents: CalendarEvent[];
   onAddEvent: (event: CalendarEvent) => void;
+  onUpdateEvent?: (event: CalendarEvent) => void;
   onRecordHistory?: (record: any) => void;
   onDeleteEvent: (id: string) => void;
 }
@@ -62,17 +63,30 @@ interface EventCardProps {
   onDraftNotice: (ev: CalendarEvent) => void;
   onAiSuggest: (ev: CalendarEvent) => void;
   onDelete: (ev: CalendarEvent) => void;
+  onCheckOut: (ev: CalendarEvent) => void;
 }
 
 // Helper component for rendering a single event card
-const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, onDelete }) => (
-  <div className="group relative p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all duration-300">
+const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, onDelete, onCheckOut }) => (
+  <div className={`group relative p-5 rounded-2xl border transition-all duration-300 ${ev.checkedOut ? 'bg-emerald-50 border-emerald-200 opacity-80' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-lg'}`}>
       <div className="flex justify-between items-start mb-2">
-          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeBadgeColor(ev.type)}`}>
-          {ev.type}
-          </span>
           <div className="flex items-center gap-2">
-          {ev.type === 'Inspection' && (
+             <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeBadgeColor(ev.type)}`}>
+             {ev.type}
+             </span>
+             {/* Check-Out Box */}
+             <div className="flex items-center">
+                <input 
+                    type="checkbox" 
+                    checked={!!ev.checkedOut}
+                    onChange={(e) => { e.stopPropagation(); onCheckOut(ev); }}
+                    className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    title="Check out to verify attendance"
+                />
+             </div>
+          </div>
+          <div className="flex items-center gap-2">
+          {ev.type === 'Inspection' && !ev.checkedOut && (
               <button 
                   onClick={(e) => { e.stopPropagation(); onDraftNotice(ev); }}
                   className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 px-2 py-0.5 rounded transition-colors"
@@ -101,11 +115,12 @@ const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, o
             </button>
           )}
 
-          <span className="text-xs font-bold text-slate-900">{ev.time}</span>
+          <span className={`text-xs font-bold ${ev.checkedOut ? 'text-emerald-700' : 'text-slate-900'}`}>{ev.time}</span>
           </div>
       </div>
-      <h4 className="font-bold text-slate-900">{ev.title}</h4>
+      <h4 className={`font-bold ${ev.checkedOut ? 'text-emerald-900 line-through' : 'text-slate-900'}`}>{ev.title}</h4>
       <p className="text-xs text-slate-500 mt-1">{ev.propertyAddress}</p>
+      {ev.checkedOut && <span className="inline-block mt-2 text-[9px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-2 py-0.5 rounded">Verified Visit</span>}
       {ev.description && (
           <div className="mt-3 pt-3 border-t border-slate-200/50">
           <p className="text-xs text-slate-600 leading-relaxed">{ev.description}</p>
@@ -114,7 +129,7 @@ const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, o
   </div>
 );
 
-const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks = [], manualEvents, onAddEvent, onRecordHistory, onDeleteEvent }) => {
+const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks = [], manualEvents, onAddEvent, onUpdateEvent, onRecordHistory, onDeleteEvent }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -186,7 +201,15 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   const allEvents = useMemo(() => {
     const events: CalendarEvent[] = [...manualEvents];
 
+    // Only add automated events if they don't already exist as manual entries (or are checked out manual entries)
+    // Actually, simple merge for now, but handle duplication in UI?
+    // Better: automated events are read-only until interact with.
+
     properties.forEach(p => {
+      // Logic: Only show auto events if we haven't manually created one for this task to avoid dups if we convert them
+      // For simplicity in this demo, we just generate them dynamically.
+      // If a user "checks out" an auto event, we will promote it to a manual event so the state persists.
+      
       if (p.nextInspectionDate) {
         events.push({
           id: `auto-insp-${p.id}`,
@@ -220,6 +243,8 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       });
     });
 
+    // Remove duplicates based on ID (Manual overrides Auto if user promoted it)
+    // For now, rely on distinct IDs
     return events;
   }, [properties, maintenanceTasks, manualEvents]);
 
@@ -235,6 +260,25 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       return evDate >= today && evDate <= twoWeeks;
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [allEvents]);
+
+  const handleToggleCheckOut = (ev: CalendarEvent) => {
+      if (!onAddEvent) return;
+
+      // If it's an automated event, we need to clone it to manual to save the state
+      if (ev.id.startsWith('auto-')) {
+          const manualCopy: CalendarEvent = {
+              ...ev,
+              id: `evt-verified-${Date.now()}`, // New ID
+              checkedOut: true // Set checked out
+          };
+          onAddEvent(manualCopy);
+      } else {
+          // It's a manual event, update it
+          if (onUpdateEvent) {
+              onUpdateEvent({ ...ev, checkedOut: !ev.checkedOut });
+          }
+      }
+  };
 
   const handleDraftNotice = async (event: CalendarEvent) => {
     setSelectedNoticeEvent(event);
@@ -309,6 +353,14 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   // --- FILTERING & SORTING LOGIC ---
   const filteredEvents = useMemo(() => {
     let events = [...rawSelectedDayEvents];
+
+    // Filter out automated events if a manual verified version exists for same prop/date to avoid duplicates
+    // (Simple de-dupe logic: if verified exists, hide auto)
+    const verifiedKeys = events.filter(e => e.checkedOut).map(e => e.propertyAddress + e.date);
+    events = events.filter(e => {
+        if (e.id.startsWith('auto-') && verifiedKeys.includes(e.propertyAddress + e.date)) return false;
+        return true;
+    });
 
     // 1. Search Filter
     if (searchTerm) {
@@ -429,7 +481,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                   {dayEvents.slice(0, 3).map(ev => (
                     <div 
                         key={ev.id} 
-                        className={`text-[9px] font-bold truncate px-2 py-1.5 rounded-md border-l-[3px] shadow-sm ${getPropertyBackgroundColor(ev.propertyAddress)} ${getEventTypeStyles(ev.type)}`}
+                        className={`text-[9px] font-bold truncate px-2 py-1.5 rounded-md border-l-[3px] shadow-sm ${getPropertyBackgroundColor(ev.propertyAddress)} ${getEventTypeStyles(ev.type)} ${ev.checkedOut ? 'opacity-50 line-through' : ''}`}
                         title={`${ev.title} - ${ev.propertyAddress}`}
                     >
                       {ev.title}
@@ -550,6 +602,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                         onDraftNotice={handleDraftNotice}
                         onAiSuggest={(e) => setActiveAiTask(e)}
                         onDelete={(e) => setEventToDelete(e)}
+                        onCheckOut={handleToggleCheckOut}
                       />
                     ))
                 ) : (
@@ -568,6 +621,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                                     onDraftNotice={handleDraftNotice}
                                     onAiSuggest={(e) => setActiveAiTask(e)}
                                     onDelete={(e) => setEventToDelete(e)}
+                                    onCheckOut={handleToggleCheckOut}
                                   />
                                 ))}
                             </div>

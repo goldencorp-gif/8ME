@@ -130,6 +130,7 @@ export interface CalendarEvent {
   type: 'Inspection' | 'Maintenance' | 'Lease' | 'Legal' | 'Viewing' | 'Other';
   propertyAddress?: string;
   description?: string;
+  checkedOut?: boolean; // New: Verifies attendance for Logbook
 }
 
 export interface LogbookEntry {
