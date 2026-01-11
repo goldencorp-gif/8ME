@@ -29,17 +29,24 @@ const MASTER_CREDENTIALS = {
 // --- CRYPTO UTILS (Local Security) ---
 async function hashPassword(password: string): Promise<string> {
   // Check for Secure Context (Required for SubtleCrypto)
+  // Also check if we are in a non-secure environment (http IP) which blocks crypto.subtle
   if (!window.crypto || !window.crypto.subtle) {
     console.warn("[Security] Secure context missing (HTTPS/Localhost required for WebCrypto). Using fallback hash.");
     // Simple fallback for dev/demo environments on non-secure IPs
     return btoa(`fallback_hash_${password}`).split('').reverse().join('');
   }
 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) {
+    console.error("Crypto Error:", e);
+    // Fallback if digest fails
+    return btoa(`fallback_hash_${password}`).split('').reverse().join('');
+  }
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -224,18 +231,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log(`[Master Override] Resetting password for ${email}`);
           const credentials = JSON.parse(localStorage.getItem('proptrust_local_auth') || '{}');
           
-          if (credentials[email.toLowerCase()]) {
-              const tempHash = await hashPassword('reset123');
-              credentials[email.toLowerCase()] = tempHash;
-              localStorage.setItem('proptrust_local_auth', JSON.stringify(credentials));
-              alert(`Success! Password for ${email} has been reset to: reset123`);
-          } else {
-              // Try to create it if it doesn't exist but the user is in the list
-              const tempHash = await hashPassword('reset123');
-              credentials[email.toLowerCase()] = tempHash;
-              localStorage.setItem('proptrust_local_auth', JSON.stringify(credentials));
-              alert(`User credential created/reset for ${email}. Pass: reset123`);
-          }
+          // Force reset with fallback hash logic
+          const tempHash = await hashPassword('reset123');
+          credentials[email.toLowerCase()] = tempHash;
+          localStorage.setItem('proptrust_local_auth', JSON.stringify(credentials));
+          
+          alert(`Success! Password for ${email} has been reset to: reset123`);
       } catch (err) {
           console.error("Reset Password Failed:", err);
           alert("Error resetting password. Check console for details.");

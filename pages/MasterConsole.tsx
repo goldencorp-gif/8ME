@@ -360,7 +360,7 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                         type="text" 
                         value={newAgency.password}
                         onChange={(e) => setNewAgency({...newAgency, password: e.target.value})}
-                        className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                        className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900"
                         placeholder="e.g. Welcome2024!"
                         />
                         <button 

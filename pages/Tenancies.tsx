@@ -356,6 +356,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, onSelectProperty, onE
              setViewingTenant(null);
              onSelectProperty(prop);
           }}
+          onUpdateProperty={onUpdateProperty}
         />
       )}
 

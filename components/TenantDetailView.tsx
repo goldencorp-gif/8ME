@@ -1,20 +1,52 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Property, PropertyDocument } from '../types';
 
 interface TenantDetailViewProps {
   property: Property;
   onClose: () => void;
   onOpenProperty: (property: Property) => void;
+  onUpdateProperty?: (property: Property) => void;
 }
 
-const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, onOpenProperty }) => {
+const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, onOpenProperty, onUpdateProperty }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'lease' | 'communications'>('overview');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mock Tenant Documents (filtered from property docs in a real app)
   const tenantDocs = property.documents?.filter(d => 
     d.category === 'Legal' || d.subCategory === 'Tenant' || d.category === 'Applications'
   ) || [];
+
+  const handleLeaseUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onUpdateProperty) {
+       const newDoc: PropertyDocument = {
+          id: `doc-lease-${Date.now()}`,
+          name: file.name,
+          category: 'Legal',
+          type: 'PDF',
+          dateAdded: new Date().toISOString().split('T')[0],
+          size: `${(file.size / 1024).toFixed(0)} KB`,
+          subCategory: 'Tenant'
+       };
+       onUpdateProperty({
+          ...property,
+          documents: [...(property.documents || []), newDoc]
+       });
+       alert("Lease document uploaded successfully.");
+    }
+    // Clear input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSendMessage = () => {
+      const msg = prompt(`Send message to ${property.tenantName || 'Tenant'}:`, "Please verify your contact details.");
+      if (msg) {
+          alert(`Message sent via SMS/Email: "${msg}"`);
+          // In a real app, this would add to communication log
+      }
+  };
 
   return (
     <div className="fixed inset-0 z-[60] overflow-hidden">
@@ -146,12 +178,19 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
 
            {activeTab === 'lease' && (
              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.jpg,.png"
+                    onChange={handleLeaseUpload}
+                />
                 <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
                    <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                       <h3 className="font-bold text-slate-900">Lease Documents</h3>
                       <button 
-                        onClick={() => alert("Please use the main Property Vault to upload new lease documents.")}
-                        className="text-xs font-black uppercase text-indigo-600 hover:text-indigo-800 tracking-widest"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-xs font-black uppercase text-indigo-600 hover:text-indigo-800 tracking-widest border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors"
                       >
                         Upload New
                       </button>
@@ -190,7 +229,10 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
                    </div>
                    <h3 className="text-xl font-bold text-slate-900">Communication Log</h3>
                    <p className="text-slate-500 mt-2 max-w-sm mx-auto">This feature tracks SMS, Emails, and Portal messages sent to {property.tenantName}.</p>
-                   <button className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all">
+                   <button 
+                        onClick={handleSendMessage}
+                        className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95"
+                   >
                       Send Message
                    </button>
                 </div>
