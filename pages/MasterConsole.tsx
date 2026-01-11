@@ -8,8 +8,12 @@ interface MasterConsoleProps {
   onImpersonate: (agency: Agency) => void;
 }
 
-// Helper to hash manually issued passwords
+// Helper to hash manually issued passwords (Duplicate of AuthContext for component independence)
 async function hashPassword(password: string): Promise<string> {
+  // Fallback for non-secure contexts
+  if (!window.crypto || !window.crypto.subtle) {
+    return btoa(`fallback_hash_${password}`).split('').reverse().join('');
+  }
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
   const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
@@ -21,10 +25,18 @@ async function hashPassword(password: string): Promise<string> {
 function generateSecurePassword(): string {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
   let password = "";
-  const array = new Uint32Array(12);
-  window.crypto.getRandomValues(array);
-  for (let i = 0; i < 12; i++) {
-    password += chars[array[i] % chars.length];
+  // Check if crypto.getRandomValues is available
+  if (window.crypto && window.crypto.getRandomValues) {
+      const array = new Uint32Array(12);
+      window.crypto.getRandomValues(array);
+      for (let i = 0; i < 12; i++) {
+        password += chars[array[i] % chars.length];
+      }
+  } else {
+      // Fallback generator
+      for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
   }
   return password;
 }
@@ -90,33 +102,38 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
         return;
     }
 
-    const hash = await hashPassword(newAgency.password);
+    try {
+        const hash = await hashPassword(newAgency.password);
 
-    const created: Agency = {
-        id: `a-${Date.now()}`,
-        name: newAgency.name,
-        contactEmail: newAgency.email,
-        status: 'Active',
-        subscriptionPlan: newAgency.plan,
-        usersCount: 1,
-        licenseLimit: newAgency.plan === 'Starter' ? 1 : 5,
-        propertiesCount: 0,
-        joinedDate: new Date().toISOString().split('T')[0],
-        mrr: newAgency.plan === 'Starter' ? 54.99 : newAgency.plan === 'Growth' ? 199.99 : 1688.00
-    };
+        const created: Agency = {
+            id: `a-${Date.now()}`,
+            name: newAgency.name,
+            contactEmail: newAgency.email,
+            status: 'Active',
+            subscriptionPlan: newAgency.plan,
+            usersCount: 1,
+            licenseLimit: newAgency.plan === 'Starter' ? 1 : 5,
+            propertiesCount: 0,
+            joinedDate: new Date().toISOString().split('T')[0],
+            mrr: newAgency.plan === 'Starter' ? 54.99 : newAgency.plan === 'Growth' ? 199.99 : 1688.00
+        };
 
-    // Save to Central Registry
-    await db.centralRegistry.registerAgency(created, hash);
-    
-    // Update Local State
-    setAgencies([...agencies, created]);
-    setIsCreateModalOpen(false);
-    
-    // Store creds temporarily to show alert
-    const createdPass = newAgency.password;
-    setNewAgency({ name: '', email: '', password: '', plan: 'Starter' });
-    
-    alert(`Credentials Issued!\n\nAgency: ${created.name}\nUser: ${created.contactEmail}\nPass: ${createdPass}\n\nEmail these to the client manually.`);
+        // Save to Central Registry
+        await db.centralRegistry.registerAgency(created, hash);
+        
+        // Update Local State
+        setAgencies([...agencies, created]);
+        setIsCreateModalOpen(false);
+        
+        // Store creds temporarily to show alert
+        const createdPass = newAgency.password;
+        setNewAgency({ name: '', email: '', password: '', plan: 'Starter' });
+        
+        alert(`Credentials Issued!\n\nAgency: ${created.name}\nUser: ${created.contactEmail}\nPass: ${createdPass}\n\nEmail these to the client manually.`);
+    } catch (e) {
+        alert("Failed to issue credentials. Check console.");
+        console.error(e);
+    }
   };
 
   const handleStatusChange = async (agency: Agency, newStatus: Agency['status']) => {
@@ -130,15 +147,24 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
   };
 
   const submitCentralReset = async () => {
-      const hash = await hashPassword(resetData.newPassword);
-      await db.centralRegistry.updateCredentials(resetData.email, hash);
-      alert(`Password Reset Successful for ${resetData.email}\n\nNew Temporary Password: ${resetData.newPassword}`);
-      setIsResetModalOpen(false);
+      try {
+        const hash = await hashPassword(resetData.newPassword);
+        await db.centralRegistry.updateCredentials(resetData.email, hash);
+        alert(`Password Reset Successful for ${resetData.email}\n\nNew Temporary Password: ${resetData.newPassword}`);
+        setIsResetModalOpen(false);
+      } catch (e) {
+        alert("Error resetting password.");
+        console.error(e);
+      }
   };
 
   const handleResetLocalPassword = async (email: string) => {
       if (confirm(`MASTER OVERRIDE:\n\nAre you sure you want to forcibly reset the password for ${email}?`)) {
-          await resetLocalUserPassword(email);
+          try {
+            await resetLocalUserPassword(email);
+          } catch (e) {
+            alert("Unexpected error calling reset function.");
+          }
       }
   };
 
