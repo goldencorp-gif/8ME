@@ -24,6 +24,21 @@
       });
     </script>
 
+    <!-- Service Worker Registration for PWA -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch((err) => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+    </script>
+
     <!-- SEO & Social Sharing for 8 Miles Estate -->
     <title>8 Miles Estate | The Operating System for Modern Agencies</title>
     <meta name="description" content="Replace PropertyMe and Console with one unified platform. Automated trust accounting, AI maintenance, and mobile inspections for Australian real estate agencies.">

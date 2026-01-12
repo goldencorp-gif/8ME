@@ -1,7 +1,10 @@
 
 {
+  "id": "/",
   "short_name": "8ME Agent",
   "name": "8ME Agency Console",
+  "description": "The operating system for modern real estate agencies. Combine property management, trust accounting, and AI automation in one beautiful app.",
+  "orientation": "any",
   "icons": [
     {
       "src": "https://placehold.co/192x192/0f172a/ffffff.png",
