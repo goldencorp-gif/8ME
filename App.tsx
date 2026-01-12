@@ -13,6 +13,7 @@ import Logbook from './pages/Logbook';
 import Login from './components/Login';
 import LandingPage from './components/LandingPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import AddPropertyModal from './components/AddPropertyModal';
 import PropertyDetailView from './components/PropertyDetailView';
 import { Property, Transaction, MaintenanceTask, UserAccount, CalendarEvent, Inquiry, Agency, HistoryRecord } from './types';
@@ -30,19 +31,21 @@ const App: React.FC = () => {
   const { isAuthenticated, user, role, logout, isLoading: isAuthLoading, updateProfile } = useAuth();
   
   // Default to 'landing' so the marketing page is the first entry point
-  const [viewState, setViewState] = useState<'landing' | 'login' | 'app' | 'privacy'>('landing');
+  const [viewState, setViewState] = useState<'landing' | 'login' | 'app' | 'privacy' | 'terms'>('landing');
 
-  // Handle Initial Route (For Privacy Policy / Share Target)
+  // Handle Initial Route (For Privacy Policy / Terms / Share Target)
   useEffect(() => {
     const path = window.location.pathname;
     if (path === '/privacy') {
       setViewState('privacy');
+    } else if (path === '/terms') {
+      setViewState('terms');
     }
   }, []);
 
   // Sync Auth State with View
   useEffect(() => {
-    if (isAuthenticated && viewState !== 'privacy') {
+    if (isAuthenticated && viewState !== 'privacy' && viewState !== 'terms') {
       setViewState('app');
     } else if (viewState === 'app' && !isAuthenticated) {
       // If we are in 'app' mode but not authenticated, kick back to login
@@ -285,6 +288,12 @@ const App: React.FC = () => {
     showToast('Ledger exported to CSV');
   };
 
+  // Explicitly handle navigation from Landing Page to ensure SPA behavior (no reload)
+  const handleLandingNavigation = (view: 'privacy' | 'terms' | 'login') => {
+    setViewState(view);
+    window.scrollTo(0, 0);
+  };
+
   const renderContent = () => {
     // If data loading, show spinner
     if (loadingData) return <div className="flex flex-col items-center justify-center h-[60vh] text-center text-slate-400 italic uppercase tracking-widest animate-pulse">Loading Secure Data...</div>;
@@ -415,8 +424,15 @@ const App: React.FC = () => {
   return (
     <>
       {viewState === 'privacy' && <PrivacyPolicy onBack={() => setViewState('landing')} />}
+      {viewState === 'terms' && <TermsOfService onBack={() => setViewState('landing')} />}
 
-      {viewState === 'landing' && <LandingPage onLoginClick={() => setViewState('login')} onRequestDemo={() => setViewState('login')} />}
+      {viewState === 'landing' && (
+        <LandingPage 
+          onLoginClick={() => handleLandingNavigation('login')} 
+          onRequestDemo={() => handleLandingNavigation('login')} 
+          onNavigate={(view) => handleLandingNavigation(view)} 
+        />
+      )}
       
       {viewState === 'login' && <Login onBack={() => setViewState('landing')} />}
 

@@ -63,7 +63,13 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
       }
   };
 
-  const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white";
+  // Helper to safely open external links in PWA/Webview/Browser
+  const openExternalLink = (url: string) => {
+    // Force new window to avoid X-Frame-Options: DENY from Google
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400";
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in pb-12">
@@ -250,7 +256,14 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                     </div>
                     <p className="text-[10px] text-slate-400 mt-3 flex items-center gap-1">
                         <svg className="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span>Gemini 3 Flash is currently free. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-600 underline font-bold hover:text-indigo-800">Get your free API Key here</a>.</span>
+                        <span>Gemini 3 Flash is currently free. 
+                          <button 
+                            onClick={() => openExternalLink("https://aistudio.google.com/app/apikey")} 
+                            className="text-indigo-600 underline font-bold hover:text-indigo-800 ml-1"
+                          >
+                            Get your free API Key here
+                          </button>.
+                        </span>
                     </p>
                 </div>
              </div>
