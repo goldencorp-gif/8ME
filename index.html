@@ -12,13 +12,16 @@
     <link rel="manifest" href="/manifest.json">
 
     <!-- Google Analytics -->
-    <!-- Note: Add your G-Tag ID in the script src below before deploying if you have one -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-placeholder"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WE8TVNRCHZ"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      // gtag('config', 'G-YOUR-ID-HERE'); 
+
+      // Initialize with your ID
+      gtag('config', 'G-WE8TVNRCHZ', {
+        send_page_view: false // We handle page views manually in App.tsx for better accuracy in this React App
+      });
     </script>
 
     <!-- SEO & Social Sharing for 8 Miles Estate -->
