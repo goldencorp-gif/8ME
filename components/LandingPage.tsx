@@ -162,86 +162,135 @@ For privacy inquiries, please contact: privacy@8me.com
                </button>
             </div>
 
-            {/* Dashboard Preview - CSS MOCK (No external copyright images) */}
+            {/* Dashboard Preview - Professional Browser Frame with Custom UI Mockup */}
             <div className="mt-20 relative mx-auto max-w-5xl group">
                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-20 pointer-events-none"></div>
                
-               <div className="rounded-[2rem] border-8 border-slate-800 bg-slate-100 shadow-2xl overflow-hidden relative z-10 group-hover:scale-[1.02] transition-transform duration-700 aspect-video flex">
-                  {/* Mock Sidebar */}
-                  <div className="w-20 bg-slate-900 flex flex-col items-center py-6 space-y-6 shrink-0">
-                     <div className="w-10 h-10 bg-indigo-600 rounded-xl"></div>
-                     <div className="w-8 h-8 bg-slate-700 rounded-lg opacity-50"></div>
-                     <div className="w-8 h-8 bg-slate-700 rounded-lg opacity-50"></div>
-                     <div className="w-8 h-8 bg-slate-700 rounded-lg opacity-50"></div>
+               {/* Browser Window Frame */}
+               <div className="rounded-[1.5rem] border border-slate-800 bg-slate-950 shadow-2xl overflow-hidden relative z-10 group-hover:scale-[1.01] transition-transform duration-700">
+                  {/* Browser Toolbar */}
+                  <div className="bg-slate-900/95 backdrop-blur px-4 py-3 flex items-center space-x-2 border-b border-slate-800">
+                     <div className="flex space-x-1.5">
+                        <div className="w-3 h-3 rounded-full bg-rose-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                     </div>
+                     <div className="ml-4 flex-1 flex justify-center">
+                        <div className="bg-slate-950 border border-slate-800 rounded-lg px-4 py-1 text-[10px] text-slate-500 font-mono flex items-center gap-2 shadow-inner">
+                           <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                           app.8me.com/dashboard
+                        </div>
+                     </div>
+                     <div className="w-10"></div>
                   </div>
                   
-                  {/* Mock Content */}
-                  <div className="flex-1 bg-slate-50 p-6 overflow-hidden">
-                     {/* Mock Header */}
-                     <div className="flex justify-between items-center mb-8">
-                        <div className="h-8 w-48 bg-slate-200 rounded-lg"></div>
-                        <div className="flex space-x-3">
-                           <div className="h-10 w-10 bg-white rounded-full shadow-sm"></div>
-                           <div className="h-10 w-32 bg-indigo-600 rounded-xl shadow-sm"></div>
-                        </div>
-                     </div>
-                     
-                     {/* Mock Stats */}
-                     <div className="grid grid-cols-4 gap-4 mb-8">
-                        <div className="h-32 bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-                           <div className="h-4 w-20 bg-slate-100 rounded mb-2"></div>
-                           <div className="h-8 w-32 bg-slate-800 rounded"></div>
-                        </div>
-                        <div className="h-32 bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-                           <div className="h-4 w-20 bg-slate-100 rounded mb-2"></div>
-                           <div className="h-8 w-16 bg-emerald-500 rounded"></div>
-                        </div>
-                        <div className="h-32 bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-                           <div className="h-4 w-20 bg-slate-100 rounded mb-2"></div>
-                           <div className="h-8 w-24 bg-slate-800 rounded"></div>
-                        </div>
-                        <div className="h-32 bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-                           <div className="h-4 w-20 bg-slate-100 rounded mb-2"></div>
-                           <div className="h-8 w-28 bg-slate-800 rounded"></div>
-                        </div>
+                  {/* CSS-Built Dashboard Mockup */}
+                  <div className="aspect-[16/10] bg-slate-950 flex flex-row overflow-hidden relative">
+                     {/* Sidebar Mock */}
+                     <div className="w-16 md:w-20 border-r border-slate-800 bg-slate-900/50 flex flex-col items-center py-6 space-y-6 shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">8</div>
+                        <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></div>
+                        <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg></div>
+                        <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
                      </div>
 
-                     {/* Mock Table */}
-                     <div className="bg-white rounded-3xl shadow-sm border border-slate-200 h-full p-6">
-                        <div className="flex justify-between mb-6">
-                           <div className="h-6 w-32 bg-slate-200 rounded"></div>
-                           <div className="h-6 w-20 bg-slate-100 rounded"></div>
+                     {/* Dashboard Main Content Mock */}
+                     <div className="flex-1 p-6 md:p-8 space-y-6 overflow-hidden">
+                        
+                        {/* Header Mock */}
+                        <div className="flex justify-between items-center mb-4">
+                           <div>
+                              <h3 className="text-xl font-bold text-white">Dashboard</h3>
+                              <div className="w-32 h-3 bg-slate-800 rounded mt-2"></div>
+                           </div>
+                           <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700"></div>
+                              <div className="w-24 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-bold flex items-center justify-center">ADD PROPERTY</div>
+                           </div>
                         </div>
-                        <div className="space-y-4">
-                           <div className="h-12 w-full bg-slate-50 rounded-xl"></div>
-                           <div className="h-12 w-full bg-slate-50 rounded-xl"></div>
-                           <div className="h-12 w-full bg-slate-50 rounded-xl"></div>
-                           <div className="h-12 w-full bg-slate-50 rounded-xl"></div>
+
+                        {/* Stats Grid Mock */}
+                        <div className="grid grid-cols-3 gap-4">
+                           <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                              <div className="flex justify-between items-start mb-2">
+                                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                                 <span className="text-[10px] text-emerald-500 font-bold">+12%</span>
+                              </div>
+                              <div className="h-2 w-16 bg-slate-800 rounded mb-1"></div>
+                              <div className="text-lg font-bold text-white">$2.4M</div>
+                           </div>
+                           <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                              <div className="flex justify-between items-start mb-2">
+                                 <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>
+                              </div>
+                              <div className="h-2 w-12 bg-slate-800 rounded mb-1"></div>
+                              <div className="text-lg font-bold text-white">142</div>
+                           </div>
+                           <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                              <div className="flex justify-between items-start mb-2">
+                                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
+                                 <span className="text-[10px] text-amber-500 font-bold">Action</span>
+                              </div>
+                              <div className="h-2 w-20 bg-slate-800 rounded mb-1"></div>
+                              <div className="text-lg font-bold text-white">3 Pending</div>
+                           </div>
+                        </div>
+
+                        {/* Chart/Table Mock */}
+                        <div className="grid grid-cols-3 gap-4 h-full">
+                           <div className="col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-4">
+                              <div className="flex justify-between">
+                                 <div className="w-24 h-3 bg-slate-800 rounded"></div>
+                                 <div className="w-12 h-3 bg-slate-800 rounded"></div>
+                              </div>
+                              <div className="flex-1 flex items-end justify-between space-x-2 px-2 pb-2">
+                                 <div className="w-full bg-indigo-900/30 rounded-t h-[40%] relative"><div className="absolute bottom-0 w-full bg-indigo-500 rounded-t h-[60%]"></div></div>
+                                 <div className="w-full bg-indigo-900/30 rounded-t h-[60%] relative"><div className="absolute bottom-0 w-full bg-indigo-500 rounded-t h-[75%]"></div></div>
+                                 <div className="w-full bg-indigo-900/30 rounded-t h-[50%] relative"><div className="absolute bottom-0 w-full bg-indigo-500 rounded-t h-[50%]"></div></div>
+                                 <div className="w-full bg-indigo-900/30 rounded-t h-[70%] relative"><div className="absolute bottom-0 w-full bg-indigo-500 rounded-t h-[80%]"></div></div>
+                                 <div className="w-full bg-indigo-900/30 rounded-t h-[80%] relative"><div className="absolute bottom-0 w-full bg-indigo-500 rounded-t h-[90%]"></div></div>
+                              </div>
+                           </div>
+                           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                              <div className="w-20 h-3 bg-slate-800 rounded mb-2"></div>
+                              <div className="space-y-3">
+                                 {[1,2,3,4].map(i => (
+                                    <div key={i} className="flex items-center space-x-3">
+                                       <div className="w-8 h-8 rounded-full bg-slate-800"></div>
+                                       <div className="flex-1 space-y-1">
+                                          <div className="w-16 h-2 bg-slate-800 rounded"></div>
+                                          <div className="w-10 h-2 bg-slate-800 rounded opacity-50"></div>
+                                       </div>
+                                    </div>
+                                 ))}
+                              </div>
+                           </div>
                         </div>
                      </div>
                   </div>
                </div>
 
-               {/* Floating UI Elements */}
-               <div className="absolute -right-8 top-20 z-30 bg-white p-4 rounded-2xl shadow-xl hidden lg:block animate-in slide-in-from-right duration-1000">
-                  <div className="flex items-center space-x-3">
-                     <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+               {/* Glassmorphism Floating UI Elements */}
+               <div className="absolute -right-8 top-32 z-30 hidden lg:block animate-in slide-in-from-right duration-1000 delay-100">
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center space-x-4 w-64">
+                     <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                      </div>
                      <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase">Trust Balance</p>
-                        <p className="text-lg font-black text-slate-900">$1,240,500.00</p>
+                        <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Trust Balance</p>
+                        <p className="text-xl font-black text-white">$1,240,500</p>
                      </div>
                   </div>
                </div>
-               <div className="absolute -left-8 bottom-40 z-30 bg-white p-4 rounded-2xl shadow-xl hidden lg:block animate-in slide-in-from-left duration-1000 delay-200">
-                  <div className="flex items-center space-x-3">
-                     <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+
+               <div className="absolute -left-8 bottom-40 z-30 hidden lg:block animate-in slide-in-from-left duration-1000 delay-300">
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center space-x-4 w-64">
+                     <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                      </div>
                      <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase">AI Tasks</p>
-                        <p className="text-lg font-black text-slate-900">14 Automated</p>
+                        <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">AI Automation</p>
+                        <p className="text-lg font-black text-white">14 Tasks Drafted</p>
                      </div>
                   </div>
                </div>

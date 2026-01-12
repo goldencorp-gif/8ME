@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { MaintenanceTask, Property } from '../types';
 import { prioritizeMaintenance } from '../services/geminiService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MaintenanceProps {
   tasks: MaintenanceTask[];
@@ -11,6 +12,7 @@ interface MaintenanceProps {
 }
 
 const Maintenance: React.FC<MaintenanceProps> = ({ tasks, properties, onAddTask, onUpdateTask }) => {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
   
@@ -24,6 +26,31 @@ const Maintenance: React.FC<MaintenanceProps> = ({ tasks, properties, onAddTask,
   const columns: MaintenanceTask['status'][] = ['New', 'Quote', 'In Progress', 'Completed'];
 
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-sm font-bold text-slate-900";
+
+  // CHECK PLAN STATUS
+  const isPremium = user?.plan && user.plan !== 'Trial';
+
+  if (!isPremium) {
+      return (
+          <div className="max-w-4xl mx-auto py-24 text-center">
+              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-8 text-slate-400">
+                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <h2 className="text-3xl font-black text-slate-900 mb-4">Demo Restriction</h2>
+              <p className="text-slate-500 max-w-lg mx-auto mb-8">
+                  Full maintenance workflows, AI triage, and work order management are only available in the full version.
+              </p>
+              <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100 inline-block text-left max-w-sm">
+                  <h4 className="font-bold text-indigo-900 mb-2">Activation Steps:</h4>
+                  <ol className="list-decimal list-inside text-sm text-indigo-800 space-y-2">
+                      <li>Purchase a subscription plan.</li>
+                      <li>Receive your credentials from the Master Admin.</li>
+                      <li>Log in with the new credentials to unlock these features instantly.</li>
+                  </ol>
+              </div>
+          </div>
+      );
+  }
 
   const handleAiPriority = async () => {
     if (!formData.issue) return;

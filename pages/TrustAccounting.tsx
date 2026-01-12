@@ -84,6 +84,31 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
   const [eomDate, setEomDate] = useState(new Date().toISOString().split('T')[0]);
   const [auditReport, setAuditReport] = useState<string | null>(null);
 
+  // CHECK PLAN STATUS
+  const isPremium = user?.plan && user.plan !== 'Trial';
+
+  if (!isPremium) {
+      return (
+          <div className="max-w-4xl mx-auto py-24 text-center">
+              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-8 text-slate-400">
+                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <h2 className="text-3xl font-black text-slate-900 mb-4">Demo Restriction</h2>
+              <p className="text-slate-500 max-w-lg mx-auto mb-8">
+                  Trust Accounting, including EOM Wizard, Bank Feeds, and Audit Reports, is only available in the full version.
+              </p>
+              <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100 inline-block text-left max-w-sm">
+                  <h4 className="font-bold text-indigo-900 mb-2">Activation Steps:</h4>
+                  <ol className="list-decimal list-inside text-sm text-indigo-800 space-y-2">
+                      <li>Purchase a subscription plan.</li>
+                      <li>Receive your credentials from the Master Admin.</li>
+                      <li>Log in with the new credentials to unlock these features instantly.</li>
+                  </ol>
+              </div>
+          </div>
+      );
+  }
+
   // Initialize Mock Data & Load Config
   useEffect(() => {
     // Only populate if empty to avoid overwriting changes in a real app flow
@@ -757,7 +782,7 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
               <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md animate-in fade-in" onClick={() => setShowUnlockModal(false)} />
               <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 text-center animate-in zoom-in-95">
                   <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2">Modify Ledger</h3>
                   <p className="text-sm text-slate-500 mb-6">Enter password to unlock this transaction for editing.</p>
