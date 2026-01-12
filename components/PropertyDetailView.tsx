@@ -100,7 +100,7 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                    size: `${(file.size / 1024).toFixed(0)} KB`,
                    dateAdded: new Date().toISOString().split('T')[0],
                    url: reader.result as string, 
-                   type: 'Image' // Assume image replacement for this context
+                   type: 'Image' as const // Explicitly cast to literal type to fix TS error
                 };
              }
              return d;

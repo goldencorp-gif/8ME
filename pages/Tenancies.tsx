@@ -147,7 +147,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
 
     const updatedFollowUps = prop.inspectionFollowUps.map(item => 
         item.id === itemId 
-            ? { ...item, status: item.status === 'Pending' ? 'Completed' : 'Pending' as const } 
+            ? { ...item, status: (item.status === 'Pending' ? 'Completed' : 'Pending') as InspectionFollowUp['status'] } 
             : item
     );
     onUpdateProperty({ ...prop, inspectionFollowUps: updatedFollowUps });
