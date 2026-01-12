@@ -161,7 +161,6 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
     onUpdateProperty({ ...prop, inspectionFollowUps: updatedFollowUps });
   };
 
-  // ... [Rest of file content remains unchanged, keeping all render logic for Tenancies] ...
   // --- MONETIZATION LOGIC (Improved) ---
   const handleConnectUtility = (e: React.MouseEvent, prop: Property) => {
     e.stopPropagation();
