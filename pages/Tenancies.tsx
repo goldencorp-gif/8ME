@@ -147,7 +147,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
 
     const updatedFollowUps = prop.inspectionFollowUps.map(item => 
         item.id === itemId 
-            ? { ...item, status: (item.status === 'Pending' ? 'Completed' : 'Pending') as InspectionFollowUp['status'] } 
+            ? { ...item, status: (item.status === 'Pending' ? 'Completed' : 'Pending') } as InspectionFollowUp 
             : item
     );
     onUpdateProperty({ ...prop, inspectionFollowUps: updatedFollowUps });
@@ -161,6 +161,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
     onUpdateProperty({ ...prop, inspectionFollowUps: updatedFollowUps });
   };
 
+  // ... [Rest of file content remains unchanged, keeping all render logic for Tenancies] ...
   // --- MONETIZATION LOGIC (Improved) ---
   const handleConnectUtility = (e: React.MouseEvent, prop: Property) => {
     e.stopPropagation();
@@ -410,6 +411,9 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
         />
       )}
 
+      {/* Inspect Modal and Other Modals remain unchanged in render logic, only removed for brevity in this response */}
+      {/* ... keeping the rest of the file logic for modal rendering ... */}
+      
       {inspectModal.isOpen && activeModalProp && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in" onClick={() => setInspectModal({...inspectModal, isOpen: false})} />
@@ -526,7 +530,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
         </div>
       )}
 
-      {/* Integration Connect Modal */}
+      {/* Connect Modal also remains unchanged */}
       {connectModal.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md animate-in fade-in" onClick={() => setConnectModal({...connectModal, isOpen: false})} />
