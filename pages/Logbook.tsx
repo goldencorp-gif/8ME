@@ -4,12 +4,14 @@ import { LogbookEntry, CalendarEvent } from '../types';
 import { db } from '../services/db';
 import { generateLogbookEntriesFromSchedule } from '../services/geminiService';
 import StatCard from '../components/StatCard';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LogbookProps {
     calendarEvents?: CalendarEvent[];
 }
 
 const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
+  const { user } = useAuth(); // Access user profile for office address
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,7 +98,7 @@ const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
       }).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
       if (verifiedEvents.length === 0) {
-          alert("No verified (checked-out) appointments found for today.\n\nPlease go to Schedule and tick the 'Check-Out' box on your appointments first.");
+          alert("No verified (checked-out) appointments found for today.\n\nPlease go to Schedule and tick the 'Check-Out' box on your appointments first to confirm you attended them.");
           return;
       }
 
@@ -105,8 +107,11 @@ const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
           // Get last odometer to continue sequence
           let currentOdo = getLastEndOdo();
           
+          // Use the office address from profile settings, or default
+          const startPoint = user?.officeAddress || 'Agency Office';
+
           // Call AI
-          const aiEntries = await generateLogbookEntriesFromSchedule(verifiedEvents, 'Agency Office');
+          const aiEntries = await generateLogbookEntriesFromSchedule(verifiedEvents, startPoint);
           
           if (aiEntries.length > 0) {
               for (const entry of aiEntries) {
@@ -127,7 +132,7 @@ const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
                   currentOdo += dist;
               }
               await loadLogbook();
-              alert(`Success! Generated ${aiEntries.length} logbook entries based on your schedule.`);
+              alert(`Success! Generated ${aiEntries.length} logbook entries based on your verified schedule starting from "${startPoint}".`);
           } else {
               alert("AI could not calculate a valid route. Please ensure appointments have valid addresses.");
           }
@@ -189,6 +194,7 @@ const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
                 <button 
                     onClick={handleSyncSchedule}
                     disabled={syncing}
+                    title="Import verified (checked-out) appointments from today's Schedule"
                     className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-all flex items-center gap-2"
                 >
                     {syncing ? (
@@ -196,7 +202,7 @@ const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
                     ) : (
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     )}
-                    Sync Schedule
+                    Import from Schedule
                 </button>
 
                 <button 
@@ -254,7 +260,7 @@ const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
                         <th className="px-8 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Distance</th>
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-100">
                      {loading ? (
                         <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic">Loading records...</td></tr>
                      ) : entries.length === 0 ? (

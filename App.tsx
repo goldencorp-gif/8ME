@@ -201,6 +201,12 @@ const App: React.FC = () => {
     showToast(`${count} Ledger entries processed`);
   };
 
+  const handleUpdateTransaction = async (tx: Transaction) => {
+    await db.transactions.update(tx);
+    setTransactions(prev => prev.map(t => t.id === tx.id ? tx : t));
+    showToast('Transaction correction saved');
+  };
+
   const handleUpdateMaintenance = async (task: MaintenanceTask) => {
     await db.maintenance.save(task);
     const freshTasks = await db.maintenance.list();
@@ -296,7 +302,7 @@ const App: React.FC = () => {
                   onNavigate={setActiveTab} 
                />;
       case 'trust':
-        return <TrustAccounting properties={properties} transactions={transactions} onAddTransaction={handleAddTransaction} />;
+        return <TrustAccounting properties={properties} transactions={transactions} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} />;
       case 'maintenance':
         return <Maintenance tasks={maintenanceTasks} properties={properties} onAddTask={handleUpdateMaintenance} onUpdateTask={handleUpdateMaintenance} />;
       case 'schedule':

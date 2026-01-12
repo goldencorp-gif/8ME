@@ -119,15 +119,11 @@ export const db = {
         const list = await dbRead<UserAccount[]>('users', []);
         const updated = list.map(u => {
             if (u.email === email) {
-                // In a real app we'd handle the hash update here
-                // For this structure, we assume the 'passwordHash' is stored in metadata or separate
                 return { ...u, lastActive: 'Password Reset by Master' };
             }
             return u;
         });
         await dbWrite('users', updated);
-        // Also update the separate auth store if we were storing secrets separately
-        // (Simplified for this demo: secrets managed in AuthContext via same storage key logic)
     }
   },
 
@@ -154,6 +150,11 @@ export const db = {
       const list = await dbRead<Transaction[]>('transactions', MOCK_TRANSACTIONS);
       const newItems = Array.isArray(txOrList) ? txOrList : [txOrList];
       await dbWrite('transactions', [...newItems, ...list]);
+    },
+    update: async (tx: Transaction) => {
+      const list = await dbRead<Transaction[]>('transactions', MOCK_TRANSACTIONS);
+      const updated = list.map(t => t.id === tx.id ? tx : t);
+      await dbWrite('transactions', updated);
     },
     deleteLinkedTo: async (identifier: string) => {
       console.log(`[Audit Compliance] Preserving ledger history for ${identifier}. Transactions are immutable.`);

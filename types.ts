@@ -24,6 +24,7 @@ export interface UserProfile {
   title: string;
   email: string;
   phone: string;
+  officeAddress?: string; // For Logbook calculations
   plan?: 'Trial' | 'Starter' | 'Growth' | 'Enterprise'; // Added for feature gating
 }
 

@@ -81,6 +81,17 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
               />
             </div>
             <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Office Address</label>
+              <p className="text-[10px] text-slate-400 mb-2">Used as the start/end point for AI Logbook calculations.</p>
+              <input 
+                type="text" 
+                value={userProfile.officeAddress || ''} 
+                onChange={(e) => onUpdateProfile({...userProfile, officeAddress: e.target.value})}
+                className={inputClass}
+                placeholder="e.g. 123 Business St, Sydney NSW 2000"
+              />
+            </div>
+            <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
               <input 
                 type="email" 
