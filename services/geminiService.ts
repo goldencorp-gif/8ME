@@ -16,6 +16,20 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
   }
 };
 
+// Helper to clean JSON string from Markdown
+const cleanJsonString = (text: string) => {
+  if (!text) return '[]';
+  // Remove markdown code blocks if present
+  let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  // Attempt to find the array bracket if there is extra text
+  const firstBracket = clean.indexOf('[');
+  const lastBracket = clean.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1) {
+    clean = clean.substring(firstBracket, lastBracket + 1);
+  }
+  return clean;
+};
+
 export const generatePropertyDescription = async (address: string, features: string[]) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
@@ -234,7 +248,7 @@ export const parseTransactionFromText = async (rawText: string) => {
       }
     });
     
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error) {
     console.error("Gemini Parse Error:", error);
     return null;
@@ -301,7 +315,7 @@ export const parseInvoiceRequest = async (
         responseMimeType: "application/json"
       }
     });
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error) {
     console.error("Gemini Invoice Error:", error);
     return null;
@@ -335,7 +349,7 @@ export const parseBankStatement = async (imageBase64: string) => {
       },
       config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(response.text || '[]');
+    return JSON.parse(cleanJsonString(response.text || '[]'));
   } catch (error) {
     console.error("Gemini Statement Error:", error);
     return [];
@@ -359,7 +373,7 @@ export const prioritizeMaintenance = async (issue: string) => {
         responseMimeType: "application/json"
       }
     });
-    return JSON.parse(response.text || '{}').priority || 'Medium';
+    return JSON.parse(cleanJsonString(response.text || '{}')).priority || 'Medium';
   } catch (error) {
     return 'Medium';
   }
@@ -392,7 +406,7 @@ export const generateBackgroundCheck = async (name: string, id: string, address:
         responseMimeType: "application/json"
       }
     });
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error) {
     console.error("Gemini Check Error:", error);
     return null;
@@ -500,7 +514,7 @@ export const processScheduleTextCommand = async (text: string, contextDate: stri
         responseMimeType: "application/json"
       }
     });
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error: any) {
     console.error("Text Command Error:", error);
     if (error?.status === 429 || error?.code === 429 || error?.message?.includes('RESOURCE_EXHAUSTED')) {
@@ -558,7 +572,7 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
         responseMimeType: "application/json"
       }
     });
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error: any) {
     console.error("Voice Command Error:", error);
     if (error?.status === 429 || error?.code === 429 || error?.message?.includes('RESOURCE_EXHAUSTED')) {
@@ -572,7 +586,15 @@ export const optimizeScheduleOrder = async (events: any[]) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
-    const response = await ai.models.generateContent({
+    // Sanitize events to ensure minimal context for the model and robust parsing
+    const simpleEvents = events.map(e => ({ 
+      id: e.id, 
+      title: e.title || 'Task', 
+      time: e.time || '09:00', 
+      address: e.propertyAddress || 'Office' 
+    }));
+
+    const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `I have a list of property management events for today.
       Please re-order them to be most efficient.
@@ -582,18 +604,19 @@ export const optimizeScheduleOrder = async (events: any[]) => {
       2. Prioritize 'Inspection' and 'Leasing' events during business hours (9-5).
       3. Put 'Maintenance' checks in between.
       
-      Events List: ${JSON.stringify(events.map(e => ({ id: e.id, title: e.title, time: e.time, address: e.propertyAddress })))}
+      Events List: ${JSON.stringify(simpleEvents)}
       
-      Return ONLY a JSON array of event IDs in the optimized order:
-      ["id_1", "id_2", ...]`,
+      Return ONLY a JSON array of event IDs in the optimized order. Example: ["id1", "id3", "id2"]`,
       config: {
-        responseMimeType: "application/json"
+        responseMimeType: "application/json",
       }
     });
-    return JSON.parse(response.text || '[]');
+    
+    // Explicitly clean JSON before parsing
+    return JSON.parse(cleanJsonString(response.text || '[]'));
   } catch (error) {
     console.error("Optimization Error:", error);
-    return [];
+    throw error; // Rethrow to let caller handle
   }
 };
 
@@ -674,7 +697,7 @@ export const generateLogbookEntriesFromSchedule = async (events: any[], officeAd
     
     if (tripPoints.length === 0) return [];
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `You are an intelligent Vehicle Logbook Assistant.
       Context: A property manager has visited the following properties today.
@@ -701,9 +724,9 @@ export const generateLogbookEntriesFromSchedule = async (events: any[], officeAd
       }
     });
     
-    return JSON.parse(response.text || '[]');
-  } catch (error) {
-    console.error("Logbook Gen Error:", error);
+    return JSON.parse(cleanJsonString(response.text || '[]'));
+  } catch (error: any) {
+    console.error("Logbook Gen Error:", error.message || error);
     return [];
   }
 };

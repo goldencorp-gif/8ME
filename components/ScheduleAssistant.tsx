@@ -10,6 +10,7 @@ interface ScheduleAssistantProps {
   onAddEvent: (event: CalendarEvent) => void;
   onReorderEvents: (orderedIds: string[]) => void;
   suggestTask?: CalendarEvent | null;
+  onClearSuggestion?: () => void;
 }
 
 const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({ 
@@ -18,7 +19,8 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   allHistoryEvents,
   onAddEvent, 
   onReorderEvents,
-  suggestTask
+  suggestTask,
+  onClearSuggestion
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -33,14 +35,14 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Effect to generate daily tip
+  // Effect to generate daily tip or reset message
   useEffect(() => {
     if (dayEvents.length > 0 && !suggestTask) {
       generateScheduleTips(dayEvents).then(msg => setAssistantMessage(`Tip: ${msg}`));
     } else if (!suggestTask) {
       setAssistantMessage("Day is clear. I'm ready to help organize your schedule.");
     }
-  }, [dayEvents]);
+  }, [dayEvents, suggestTask]);
 
   // Effect to handle Task Suggestion
   useEffect(() => {
@@ -225,10 +227,27 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
   const handleOptimize = async () => {
     if (dayEvents.length < 2) return;
     setProcessing(true);
-    const orderedIds = await optimizeScheduleOrder(dayEvents);
-    onReorderEvents(orderedIds);
+    setAssistantMessage("Analyzing route efficiency...");
+    
+    try {
+        const orderedIds = await optimizeScheduleOrder(dayEvents);
+        if (orderedIds && orderedIds.length > 0) {
+            onReorderEvents(orderedIds);
+            setAssistantMessage(`Route optimized! I've reordered ${orderedIds.length} stops for better flow.`);
+        } else {
+            setAssistantMessage("I couldn't find a better route for these locations.");
+        }
+    } catch (e: any) {
+        console.error(e);
+        if (e.message && (e.message.includes('API_KEY') || e.status === 400 || e.status === 403)) {
+            setAssistantMessage("Error: API Key invalid or missing. Please check your configuration.");
+        } else if (e.status === 429) {
+            setAssistantMessage("Service busy (429). Please try again in a moment.");
+        } else {
+            setAssistantMessage("Sorry, I encountered an issue optimizing the route.");
+        }
+    }
     setProcessing(false);
-    setAssistantMessage("Schedule optimized for travel efficiency.");
   };
 
   const handleLookupHistory = async (query?: string) => {
@@ -258,6 +277,16 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleDismissBubble = () => {
+    if (onClearSuggestion) {
+        onClearSuggestion();
+    }
+    // Also try to reset message to default tip if applicable
+    if (!suggestTask) {
+        generateScheduleTips(dayEvents).then(msg => setAssistantMessage(`Tip: ${msg}`));
+    }
   };
 
   return (
@@ -298,13 +327,23 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
             </div>
 
             {/* AI Response Bubble */}
-            <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex-1 min-h-[60px] flex items-center">
-                 <div className="w-full">
+            <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex-1 min-h-[60px] flex items-start relative group">
+                 <div className="w-full pr-5">
                     <h5 className="text-[9px] font-black uppercase text-indigo-800 tracking-widest mb-1">{suggestTask ? `Advice for: ${suggestTask.type}` : 'AI Response'}</h5>
                     <div className="text-xs text-indigo-900 leading-relaxed font-medium whitespace-pre-line">
                         {assistantMessage || "Ready to assist."}
                     </div>
                  </div>
+                 {/* Close Button for Suggestions */}
+                 {(suggestTask || (assistantMessage && !assistantMessage.startsWith('Tip') && assistantMessage !== "Ready to assist.")) && (
+                    <button 
+                        onClick={handleDismissBubble}
+                        className="absolute top-2 right-2 text-indigo-300 hover:text-indigo-600 p-1 rounded-md hover:bg-indigo-100 transition-colors"
+                        title="Dismiss Suggestion"
+                    >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                 )}
             </div>
         </div>
 
@@ -313,16 +352,25 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
           <div className="space-y-2">
              <div className="flex justify-between items-center mb-1">
                 <h4 className="text-xs font-black uppercase text-indigo-900 tracking-widest">Today's Agenda</h4>
-                {scheduleList.length > 0 && (
-                  <button 
-                    onClick={handleDownloadList}
-                    className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-white px-2 py-1 rounded-md border border-indigo-100 shadow-sm"
-                    title="Download as CSV"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Export
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                    {scheduleList.length > 0 && (
+                      <button 
+                        onClick={handleDownloadList}
+                        className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-white px-2 py-1 rounded-md border border-indigo-100 shadow-sm"
+                        title="Download as CSV"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Export
+                      </button>
+                    )}
+                    <button 
+                        onClick={() => setScheduleList(null)}
+                        className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors"
+                        title="Close List"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
              </div>
              <div className="bg-white border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto">
                {scheduleList.length === 0 ? (
@@ -349,12 +397,6 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                Optimize Route
              </button>
-             <button 
-               onClick={() => setScheduleList(null)}
-               className="px-3 py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-[10px] font-bold hover:bg-slate-50 shadow-sm transition-all"
-             >
-               Clear View
-             </button>
         </div>
 
         {/* Text Input / History Lookup */}
@@ -375,11 +417,22 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </button>
         </div>
+        
         {historyResult && (
-            <div className="mt-2 p-3 bg-white border border-slate-200 rounded-xl max-h-32 overflow-y-auto">
-            <div className="prose prose-sm text-xs text-slate-600">
-                {historyResult.split('\n').map((line, i) => <p key={i} className="mb-1">{line}</p>)}
-            </div>
+            <div className="mt-2 p-3 bg-white border border-slate-200 rounded-xl max-h-40 overflow-y-auto relative group">
+                <div className="flex justify-between items-center mb-2 sticky top-0 bg-white/90 backdrop-blur-sm pb-1 border-b border-slate-100">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">History / Suggestions</span>
+                    <button 
+                        onClick={() => setHistoryResult('')}
+                        className="text-slate-400 hover:text-rose-500 p-1 rounded hover:bg-slate-50 transition-colors"
+                        title="Dismiss"
+                    >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div className="prose prose-sm text-xs text-slate-600">
+                    {historyResult.split('\n').map((line, i) => <p key={i} className="mb-1">{line}</p>)}
+                </div>
             </div>
         )}
 

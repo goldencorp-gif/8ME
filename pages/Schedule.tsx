@@ -526,6 +526,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                 onAddEvent={onAddEvent}
                 onReorderEvents={setCustomOrder}
                 suggestTask={activeAiTask}
+                onClearSuggestion={() => setActiveAiTask(null)}
                 />
             </div>
 
