@@ -4,7 +4,30 @@
   "short_name": "8ME Agent",
   "name": "8ME Agency Console",
   "description": "The operating system for modern real estate agencies. Combine property management, trust accounting, and AI automation in one beautiful app.",
+  "lang": "en-AU",
+  "dir": "ltr",
   "orientation": "any",
+  "scope": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "categories": [
+    "business",
+    "productivity",
+    "finance",
+    "real estate"
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "https://placehold.co/192x192/0f172a/ffffff.png",
@@ -19,8 +42,32 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#0f172a",
-  "background_color": "#0f172a"
+  "screenshots": [
+    {
+      "src": "https://placehold.co/1280x720/0f172a/ffffff.png?text=8ME+Agency+Dashboard",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Agency Dashboard Overview"
+    },
+    {
+      "src": "https://placehold.co/750x1334/0f172a/ffffff.png?text=8ME+Mobile+App",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Inspection View"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/",
+      "description": "View your agency portfolio"
+    },
+    {
+      "name": "Add Property",
+      "url": "/",
+      "description": "Onboard a new management"
+    }
+  ]
 }
