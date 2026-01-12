@@ -12,6 +12,7 @@ import MasterConsole from './pages/MasterConsole';
 import Logbook from './pages/Logbook';
 import Login from './components/Login';
 import LandingPage from './components/LandingPage';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import AddPropertyModal from './components/AddPropertyModal';
 import PropertyDetailView from './components/PropertyDetailView';
 import { Property, Transaction, MaintenanceTask, UserAccount, CalendarEvent, Inquiry, Agency, HistoryRecord } from './types';
@@ -29,11 +30,19 @@ const App: React.FC = () => {
   const { isAuthenticated, user, role, logout, isLoading: isAuthLoading, updateProfile } = useAuth();
   
   // Default to 'landing' so the marketing page is the first entry point
-  const [viewState, setViewState] = useState<'landing' | 'login' | 'app'>('landing');
+  const [viewState, setViewState] = useState<'landing' | 'login' | 'app' | 'privacy'>('landing');
+
+  // Handle Initial Route (For Privacy Policy / Share Target)
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/privacy') {
+      setViewState('privacy');
+    }
+  }, []);
 
   // Sync Auth State with View
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && viewState !== 'privacy') {
       setViewState('app');
     } else if (viewState === 'app' && !isAuthenticated) {
       // If we are in 'app' mode but not authenticated, kick back to login
@@ -405,6 +414,8 @@ const App: React.FC = () => {
 
   return (
     <>
+      {viewState === 'privacy' && <PrivacyPolicy onBack={() => setViewState('landing')} />}
+
       {viewState === 'landing' && <LandingPage onLoginClick={() => setViewState('login')} onRequestDemo={() => setViewState('login')} />}
       
       {viewState === 'login' && <Login onBack={() => setViewState('landing')} />}

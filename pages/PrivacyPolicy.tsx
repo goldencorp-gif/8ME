@@ -1,0 +1,88 @@
+
+import React from 'react';
+import { BrandLogo } from '../components/BrandLogo';
+
+interface PrivacyPolicyProps {
+  onBack?: () => void;
+}
+
+const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-500 selection:text-white">
+      {/* Header */}
+      <div className="bg-slate-900 text-white py-6 px-4 shadow-md">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <BrandLogo variant="header" />
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="text-sm font-bold text-slate-300 hover:text-white transition-colors"
+            >
+              Back to Home
+            </button>
+          )}
+        </div>
+      </div>
+
+      <main className="max-w-4xl mx-auto px-4 py-12">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 md:p-12">
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">Privacy Policy</h1>
+          <p className="text-slate-500 font-medium mb-8">Last Updated: {new Date().toLocaleDateString()}</p>
+
+          <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:text-slate-900 prose-p:text-slate-600 prose-li:text-slate-600">
+            <h3>1. Introduction</h3>
+            <p>
+              8 Miles Estate ("we", "us", "our") operates the 8ME property management application. This Privacy Policy explains how we collect, use, disclosure, and safeguard your information when you visit our website or use our mobile application.
+            </p>
+
+            <h3>2. Data Sovereignty & Collection</h3>
+            <p>
+              Unlike traditional cloud-only platforms, 8ME operates on a "Data Sovereignty" (BYOD) model.
+            </p>
+            <ul>
+              <li><strong>Local Storage:</strong> By default, tenancy data, trust ledgers, and owner details are stored locally within your device's secure storage (IndexedDB). We do not have automatic access to this data.</li>
+              <li><strong>Personal Information:</strong> We may collect personal identification information (Name, Email, Phone) when you register for an account or contact support.</li>
+              <li><strong>Usage Data:</strong> We may collect anonymous usage data to improve application performance and stability.</li>
+            </ul>
+
+            <h3>3. Use of Your Information</h3>
+            <p>
+              We use the information we collect to:
+            </p>
+            <ul>
+              <li>Provide, operate, and maintain our application.</li>
+              <li>Improve, personalize, and expand our application.</li>
+              <li>Understand and analyze how you use our application.</li>
+              <li>Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the application.</li>
+            </ul>
+
+            <h3>4. AI & Third-Party Services</h3>
+            <p>
+              <strong>Google Gemini AI:</strong> Features utilizing Generative AI (such as description writing or maintenance triage) send specific prompts to Google's API. This data is transient and not used to train our models.
+            </p>
+            <p>
+              <strong>Utility Connections:</strong> Tenant data is only shared with utility connection partners (e.g., Movinghub) when you explicitly initiate a referral within the application.
+            </p>
+
+            <h3>5. Security of Your Data</h3>
+            <p>
+              We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.
+            </p>
+
+            <h3>6. Contact Us</h3>
+            <p>
+              If you have any questions about this Privacy Policy, please contact us at: <br />
+              <strong>Email:</strong> privacy@8me.com
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <footer className="bg-slate-900 text-slate-500 py-8 text-center text-xs font-bold uppercase tracking-widest">
+        &copy; {new Date().getFullYear()} 8 Miles Estate. All rights reserved.
+      </footer>
+    </div>
+  );
+};
+
+export default PrivacyPolicy;
