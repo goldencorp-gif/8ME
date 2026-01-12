@@ -136,9 +136,18 @@ const Logbook: React.FC<LogbookProps> = ({ calendarEvents = [] }) => {
           } else {
               alert("AI could not calculate a valid route. Please ensure appointments have valid addresses.");
           }
-      } catch (e) {
-          console.error(e);
-          alert("Failed to sync schedule.");
+      } catch (e: any) {
+          console.error("Logbook Sync Error:", e);
+          
+          // Robust check for Quota/429 errors from any level (SDK or Wrapper)
+          const errorMsg = e?.message || JSON.stringify(e);
+          const isQuota = e?.isQuotaError || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('429');
+
+          if (isQuota) {
+              alert("Daily AI Quota Reached.\n\nThe system has hit the daily limit for the Gemini 3 Flash model. Please try again tomorrow or upgrade your API plan.");
+          } else {
+              alert("Failed to sync schedule. Please try again later.");
+          }
       } finally {
           setSyncing(false);
       }

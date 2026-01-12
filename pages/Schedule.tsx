@@ -201,14 +201,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   const allEvents = useMemo(() => {
     const events: CalendarEvent[] = [...manualEvents];
 
-    // Only add automated events if they don't already exist as manual entries (or are checked out manual entries)
-    // Actually, simple merge for now, but handle duplication in UI?
-    // Better: automated events are read-only until interact with.
-
     properties.forEach(p => {
-      // Logic: Only show auto events if we haven't manually created one for this task to avoid dups if we convert them
-      // For simplicity in this demo, we just generate them dynamically.
-      // If a user "checks out" an auto event, we will promote it to a manual event so the state persists.
       
       if (p.nextInspectionDate) {
         events.push({
@@ -243,23 +236,8 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       });
     });
 
-    // Remove duplicates based on ID (Manual overrides Auto if user promoted it)
-    // For now, rely on distinct IDs
     return events;
   }, [properties, maintenanceTasks, manualEvents]);
-
-  // Identify Compliance Actions (Inspections in next 14 days)
-  const upcomingInspections = useMemo(() => {
-    const today = new Date();
-    const twoWeeks = new Date();
-    twoWeeks.setDate(today.getDate() + 14);
-
-    return allEvents.filter(ev => {
-      if (ev.type !== 'Inspection') return false;
-      const evDate = new Date(ev.date);
-      return evDate >= today && evDate <= twoWeeks;
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [allEvents]);
 
   const handleToggleCheckOut = (ev: CalendarEvent) => {
       if (!onAddEvent) return;
@@ -285,7 +263,6 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
     setLoadingNotice(true);
     setIsNoticeModalOpen(true);
     
-    // Find Tenant Name from description or property list
     const tenantName = event.description?.includes('tenant:') 
         ? event.description.split('tenant:')[1].trim() 
         : 'Tenant';
@@ -299,7 +276,6 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
     // Mock send
     alert(`Notice sent successfully to tenant at ${selectedNoticeEvent?.propertyAddress}`);
     
-    // Record to history if handler provided
     if (onRecordHistory && selectedNoticeEvent) {
         onRecordHistory({
             id: `hist-notice-${Date.now()}`,
@@ -355,7 +331,6 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
     let events = [...rawSelectedDayEvents];
 
     // Filter out automated events if a manual verified version exists for same prop/date to avoid duplicates
-    // (Simple de-dupe logic: if verified exists, hide auto)
     const verifiedKeys = events.filter(e => e.checkedOut).map(e => e.propertyAddress + e.date);
     events = events.filter(e => {
         if (e.id.startsWith('auto-') && verifiedKeys.includes(e.propertyAddress + e.date)) return false;
@@ -500,26 +475,9 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       {/* Right: Agenda & AI Tools View */}
       <div className="w-full lg:w-[400px] flex flex-col space-y-6 shrink-0">
         
-        {/* Selected Date Agenda (NOW CONTAINS AI ASSISTANT) */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col min-h-[600px] overflow-hidden">
-          
-          <div className="p-8 border-b border-slate-100 pb-4">
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                <h3 className="text-3xl font-black text-slate-900">{selectedDate.getDate()}</h3>
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedDate.toLocaleString('default', { month: 'long', weekday: 'long' })}</p>
-                </div>
-                <button 
-                onClick={() => setIsModalOpen(true)}
-                className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-indigo-600 transition-all active:scale-95 group"
-                >
-                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                </button>
-            </div>
-
-            {/* AI ASSISTANT EMBEDDED HERE */}
-            <div className="mb-4">
-                <ScheduleAssistant 
+        {/* 1. Schedule Assistant (AI) - Now SEPARATE */}
+        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+            <ScheduleAssistant 
                 currentDate={selectedDate}
                 dayEvents={filteredEvents}
                 allHistoryEvents={allEvents}
@@ -527,11 +485,30 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                 onReorderEvents={setCustomOrder}
                 suggestTask={activeAiTask}
                 onClearSuggestion={() => setActiveAiTask(null)}
-                />
+            />
+        </div>
+
+        {/* 2. Selected Date Agenda (Manual Interactions) */}
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col min-h-[600px] overflow-hidden">
+          
+          <div className="p-8 border-b border-slate-100 pb-4">
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <h3 className="text-3xl font-black text-slate-900">{selectedDate.getDate()}</h3>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedDate.toLocaleString('default', { month: 'long', weekday: 'long' })}</p>
+                </div>
+                {/* Manual Add Button - Moved here */}
+                <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-indigo-600 transition-all active:scale-95 group"
+                    title="Add Manual Appointment"
+                >
+                    <svg className="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </button>
             </div>
 
-            {/* --- NEW: Advanced Search & Filter Controls --- */}
-            <div className="space-y-3">
+            {/* --- Advanced Search & Filter Controls --- */}
+            <div className="space-y-3 mt-4">
                 {/* Search Bar */}
                 <div className="relative">
                     <input 
@@ -601,7 +578,8 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                         key={ev.id} 
                         ev={ev} 
                         onDraftNotice={handleDraftNotice}
-                        onAiSuggest={(e) => setActiveAiTask(e)}
+                        // FORCE UPDATE: Create a new object reference to ensure useEffect triggers even if clicking same task
+                        onAiSuggest={(e) => setActiveAiTask({ ...e, _ts: Date.now() } as any)} 
                         onDelete={(e) => setEventToDelete(e)}
                         onCheckOut={handleToggleCheckOut}
                       />
@@ -620,7 +598,8 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                                     key={ev.id} 
                                     ev={ev}
                                     onDraftNotice={handleDraftNotice}
-                                    onAiSuggest={(e) => setActiveAiTask(e)}
+                                    // FORCE UPDATE: Create a new object reference
+                                    onAiSuggest={(e) => setActiveAiTask({ ...e, _ts: Date.now() } as any)}
                                     onDelete={(e) => setEventToDelete(e)}
                                     onCheckOut={handleToggleCheckOut}
                                   />
