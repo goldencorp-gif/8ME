@@ -1,8 +1,8 @@
 
 {
   "id": "/",
-  "short_name": "8ME Agent",
-  "name": "8ME Agency Console",
+  "short_name": "8ME",
+  "name": "8ME",
   "description": "The operating system for modern real estate agencies. Combine property management, trust accounting, and AI automation in one beautiful app.",
   "lang": "en-AU",
   "dir": "ltr",
