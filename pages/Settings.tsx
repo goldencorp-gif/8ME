@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, UserAccount } from '../types';
 
 interface SettingsProps {
@@ -19,6 +19,30 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
     billingEmail: userProfile.email,
     paymentMethod: 'Visa ending 4242'
   });
+
+  // AI API Key State
+  const [aiApiKey, setAiApiKey] = useState('');
+
+  // Load Settings on Mount
+  useEffect(() => {
+    const saved = localStorage.getItem('proptrust_agency_settings');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            setAgencyDetails(prev => ({ ...prev, ...parsed }));
+            if (parsed.aiApiKey) setAiApiKey(parsed.aiApiKey);
+        } catch (e) {
+            // Ignore error
+        }
+    }
+  }, []);
+
+  const handleSaveApiKey = () => {
+      const currentSettings = JSON.parse(localStorage.getItem('proptrust_agency_settings') || '{}');
+      const updatedSettings = { ...currentSettings, aiApiKey };
+      localStorage.setItem('proptrust_agency_settings', JSON.stringify(updatedSettings));
+      alert("AI API Key saved successfully.");
+  };
 
   const handleSubscribe = (plan: string) => {
     setAgencyDetails(prev => ({ ...prev, subscriptionPlan: plan }));
@@ -194,6 +218,43 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
         {activeTab === 'integrations' && (
           <div className="space-y-6">
              <h3 className="text-xl font-bold text-slate-900">External Connections</h3>
+             
+             {/* Google Gemini AI Configuration */}
+             <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-2xl">🧠</div>
+                        <div>
+                            <h4 className="font-bold text-slate-900">Google Gemini AI</h4>
+                            <p className="text-xs text-slate-500">Power the AI Assistant, Smart Invoice, and Logistics features.</p>
+                        </div>
+                    </div>
+                    {aiApiKey && <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-3 py-1 rounded uppercase tracking-widest">Active</span>}
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-indigo-100">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">API Key</label>
+                    <div className="flex gap-2">
+                        <input 
+                            type="password" 
+                            value={aiApiKey}
+                            onChange={(e) => setAiApiKey(e.target.value)}
+                            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Enter your Gemini API Key"
+                        />
+                        <button 
+                            onClick={handleSaveApiKey}
+                            className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 shadow-sm"
+                        >
+                            Save
+                        </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-3 flex items-center gap-1">
+                        <svg className="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span>Gemini 3 Flash is currently free. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-600 underline font-bold hover:text-indigo-800">Get your free API Key here</a>.</span>
+                    </p>
+                </div>
+             </div>
+
              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                    <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-2xl">⚡</div>

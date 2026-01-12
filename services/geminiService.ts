@@ -11,6 +11,20 @@ const FALLBACK_SUGGESTIONS: Record<string, string> = {
   'default': "1. Prioritize this task based on urgency.\n2. Document all communications in the log.\n3. Schedule a follow-up reminder."
 };
 
+// Helper to get API Key (User Override > Env Var)
+const getApiKey = (): string => {
+  try {
+    const settings = localStorage.getItem('proptrust_agency_settings');
+    if (settings) {
+      const parsed = JSON.parse(settings);
+      if (parsed.aiApiKey) return parsed.aiApiKey;
+    }
+  } catch (e) {
+    // ignore error
+  }
+  return process.env.API_KEY || '';
+};
+
 // Helper to handle API Rate Limits (429) with exponential backoff
 const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 3, delay = 1000): Promise<any> => {
   try {
@@ -61,7 +75,7 @@ const cleanJsonString = (text: string) => {
 };
 
 export const generatePropertyDescription = async (address: string, features: string[]) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -76,7 +90,7 @@ export const generatePropertyDescription = async (address: string, features: str
 export const generateLeaseAppraisal = async (
   address: string, type: string, beds: string, baths: string, cars: string, features: string[]
 ) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -91,7 +105,7 @@ export const generateLeaseAppraisal = async (
 export const generateSalesAppraisal = async (
   address: string, type: string, beds: string, baths: string, cars: string, features: string[]
 ) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -104,7 +118,7 @@ export const generateSalesAppraisal = async (
 };
 
 export const generateProspectingMessage = async (area: string, type: string, hook: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -119,7 +133,7 @@ export const generateProspectingMessage = async (area: string, type: string, hoo
 export const analyzeArrearsMessage = async (
   tenantName: string, amount: number, days: number, address: string, item: string, deadline: string, paymentMethod: string
 ) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -132,7 +146,7 @@ export const analyzeArrearsMessage = async (
 };
 
 export const generateQuoteRequestEmail = async (tradesmanName: string, address: string, issue: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -145,7 +159,7 @@ export const generateQuoteRequestEmail = async (tradesmanName: string, address: 
 };
 
 export const parseTransactionFromText = async (rawText: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -161,7 +175,7 @@ export const parseTransactionFromText = async (rawText: string) => {
 export const parseInvoiceRequest = async (
   text: string, address: string, type: 'Owner' | 'Tenant', date: string, templateBase64?: string
 ) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const parts: any[] = [{ text: `Generate invoice JSON for ${address}. Details: ${text}` }];
     if (templateBase64) parts.push({ inlineData: { mimeType: "image/png", data: templateBase64 } });
@@ -178,7 +192,7 @@ export const parseInvoiceRequest = async (
 };
 
 export const parseBankStatement = async (imageBase64: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -197,7 +211,7 @@ export const parseBankStatement = async (imageBase64: string) => {
 };
 
 export const prioritizeMaintenance = async (issue: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -211,7 +225,7 @@ export const prioritizeMaintenance = async (issue: string) => {
 };
 
 export const generateBackgroundCheck = async (name: string, id: string, address: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -225,7 +239,7 @@ export const generateBackgroundCheck = async (name: string, id: string, address:
 };
 
 export const generatePrivacyConsent = async (agencyName: string, applicantName: string, propertyAddress: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -238,7 +252,7 @@ export const generatePrivacyConsent = async (agencyName: string, applicantName: 
 };
 
 export const generateEntryNotice = async (tenantName: string, address: string, date: string, timeWindow: string = '9:00 AM - 5:00 PM') => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -251,7 +265,7 @@ export const generateEntryNotice = async (tenantName: string, address: string, d
 };
 
 export const processScheduleTextCommand = async (text: string, contextDate: string, currentSchedule: string = '') => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
@@ -261,12 +275,12 @@ export const processScheduleTextCommand = async (text: string, contextDate: stri
     return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error: any) {
     // If quota exceeded, just return a polite failure
-    return { intent: "UNKNOWN", speechResponse: "I'm having trouble connecting to the AI brain right now (Daily Limit). Please try manual controls." };
+    return { intent: "UNKNOWN", speechResponse: "I'm having trouble connecting to the AI brain right now (Daily Limit or Key Issue). Please try manual controls." };
   }
 };
 
 export const processScheduleVoiceCommand = async (audioBase64: string, contextDate: string, currentSchedule: string = '') => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
@@ -285,7 +299,7 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
 };
 
 export const optimizeScheduleOrder = async (events: any[]) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const simpleEvents = events.map(e => ({ id: e.id, title: e.title, time: e.time, address: e.propertyAddress }));
     const response = await generateContentWithRetry(ai, {
@@ -301,7 +315,7 @@ export const optimizeScheduleOrder = async (events: any[]) => {
 };
 
 export const generateScheduleTips = async (events: any[]) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
@@ -315,7 +329,7 @@ export const generateScheduleTips = async (events: any[]) => {
 };
 
 export const summarizePropertyHistory = async (address: string, events: any[]) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await generateContentWithRetry(ai, {
         model: 'gemini-3-flash-preview',
@@ -328,7 +342,7 @@ export const summarizePropertyHistory = async (address: string, events: any[]) =
 };
 
 export const generateTaskSuggestions = async (taskTitle: string, taskType: string, taskDesc: string, taskAddress: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     // Retry logic wrapper
     const response = await generateContentWithRetry(ai, {
@@ -352,7 +366,7 @@ export const generateTaskSuggestions = async (taskTitle: string, taskType: strin
 };
 
 export const generateLogbookEntriesFromSchedule = async (events: any[], officeAddress: string = 'Agency Office') => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const tripPoints = events.filter(e => e.propertyAddress && e.propertyAddress !== 'General / Office');
     if (tripPoints.length === 0) return [];
