@@ -1,6 +1,16 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
+// --- FALLBACK DATA (Offline Mode) ---
+const FALLBACK_SUGGESTIONS: Record<string, string> = {
+  'Inspection': "1. Verify entry keys are ready and working.\n2. Review the previous condition report for comparison.\n3. Send an SMS reminder to the tenant 24 hours prior.",
+  'Maintenance': "1. Check if the item is still under warranty.\n2. Assign to an approved, insured tradesperson.\n3. Set a strict budget limit for the quote.",
+  'Lease': "1. Compare current rent with latest market data.\n2. Review tenant's payment ledger for consistency.\n3. Draft the renewal lease agreement early.",
+  'Legal': "1. Review relevant RTA legislation updates.\n2. Prepare all necessary tribunal documents.\n3. Brief the landlord on potential outcomes.",
+  'Viewing': "1. Ensure all blinds are open and lights are on.\n2. Have printed property brochures ready.\n3. Follow up with attendees within 1 hour.",
+  'default': "1. Prioritize this task based on urgency.\n2. Document all communications in the log.\n3. Schedule a follow-up reminder."
+};
+
 // Helper to handle API Rate Limits (429) with exponential backoff
 const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 3, delay = 1000): Promise<any> => {
   try {
@@ -59,7 +69,7 @@ export const generatePropertyDescription = async (address: string, features: str
     });
     return response.text;
   } catch (error) {
-    return "Error generating description.";
+    return `Beautiful property located at ${address}. Featuring ${features.join(', ')}. Contact us for a viewing today.`;
   }
 };
 
@@ -74,7 +84,7 @@ export const generateLeaseAppraisal = async (
     });
     return response.text;
   } catch (error) {
-    return "Error generating appraisal.";
+    return "Appraisal generation unavailable (Offline Mode). Please estimate based on market comparables.";
   }
 };
 
@@ -89,7 +99,7 @@ export const generateSalesAppraisal = async (
     });
     return response.text;
   } catch (error) {
-    return "Error generating sales appraisal.";
+    return "Sales data unavailable (Offline Mode).";
   }
 };
 
@@ -102,7 +112,7 @@ export const generateProspectingMessage = async (area: string, type: string, hoo
     });
     return response.text;
   } catch (error) {
-    return "Error generating message.";
+    return `Hello neighbors of ${area}, active buyers are looking in your area. Contact us to discuss your property value.`;
   }
 };
 
@@ -117,7 +127,7 @@ export const analyzeArrearsMessage = async (
     });
     return response.text;
   } catch (error) {
-    return "Error generating notice.";
+    return `Dear ${tenantName}, please note that rent of $${amount} for ${address} is currently ${days} days overdue. Please remit payment immediately.`;
   }
 };
 
@@ -130,7 +140,7 @@ export const generateQuoteRequestEmail = async (tradesmanName: string, address: 
     });
     return response.text;
   } catch (error) {
-    return "Error generating email.";
+    return `Hi ${tradesmanName}, please provide a quote for attending to: ${issue} at ${address}. Thanks.`;
   }
 };
 
@@ -236,7 +246,7 @@ export const generateEntryNotice = async (tenantName: string, address: string, d
     });
     return response.text;
   } catch (error) {
-    return "Error generating notice.";
+    return `Notice of Entry\n\nTo ${tenantName},\n\nWe hereby give notice of entry to ${address} on ${date} between ${timeWindow} for the purpose of a routine inspection.\n\nRegards,\nProperty Management`;
   }
 };
 
@@ -250,8 +260,8 @@ export const processScheduleTextCommand = async (text: string, contextDate: stri
     });
     return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error: any) {
-    if (error?.isQuotaError) return { intent: "UNKNOWN", speechResponse: "⚠️ AI Daily Quota Reached. Please try again tomorrow." };
-    return { intent: "UNKNOWN", speechResponse: "Service unavailable." };
+    // If quota exceeded, just return a polite failure
+    return { intent: "UNKNOWN", speechResponse: "I'm having trouble connecting to the AI brain right now (Daily Limit). Please try manual controls." };
   }
 };
 
@@ -270,8 +280,7 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
     });
     return JSON.parse(cleanJsonString(response.text || '{}'));
   } catch (error: any) {
-    if (error?.isQuotaError) return { intent: "UNKNOWN", speechResponse: "⚠️ AI Daily Quota Reached." };
-    return { intent: "UNKNOWN", speechResponse: "Service unavailable." };
+    return { intent: "UNKNOWN", speechResponse: "Voice processing unavailable (Quota Limit)." };
   }
 };
 
@@ -286,7 +295,7 @@ export const optimizeScheduleOrder = async (events: any[]) => {
     });
     return JSON.parse(cleanJsonString(response.text || '[]'));
   } catch (error) {
-    console.warn("Optimization skipped (Quota/Error)");
+    // Silent fail
     return []; 
   }
 };
@@ -300,8 +309,8 @@ export const generateScheduleTips = async (events: any[]) => {
     });
     return response.text;
   } catch (error) {
-    console.warn("Tips skipped (Quota/Error)");
-    return "Check your keys and files before heading out!";
+    // Local Fallback Tip
+    return "Group nearby inspections to save travel time. Don't forget keys!";
   }
 };
 
@@ -314,14 +323,14 @@ export const summarizePropertyHistory = async (address: string, events: any[]) =
     });
     return response.text;
   } catch (error) {
-    return "History unavailable.";
+    return "History unavailable offline.";
   }
 };
 
 export const generateTaskSuggestions = async (taskTitle: string, taskType: string, taskDesc: string, taskAddress: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    // UPDATED: Now using Retry Wrapper to handle transient errors
+    // Retry logic wrapper
     const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `Context: Property Manager Task Assistant.
@@ -336,9 +345,9 @@ export const generateTaskSuggestions = async (taskTitle: string, taskType: strin
     });
     return response.text;
   } catch (e: any) {
-    // Explicit error message if Quota hit
-    if (e.isQuotaError) return "⚠️ AI Quota Reached. Features disabled temporarily.";
-    return "Unable to generate suggestions. Please try again.";
+    // FALLBACK: Return hardcoded best practices if Quota Exceeded
+    console.warn("Gemini Quota Hit - Using Fallback Suggestions");
+    return FALLBACK_SUGGESTIONS[taskType] || FALLBACK_SUGGESTIONS['default'];
   }
 };
 
