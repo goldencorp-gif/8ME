@@ -11,27 +11,33 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.json">
 
-    <!-- Google Analytics (Replace G-YOUR-ID-HERE with your actual ID) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YOUR-ID-HERE"></script>
+    <!-- Google Analytics -->
+    <!-- Note: Add your G-Tag ID in the script src below before deploying if you have one -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-placeholder"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
-      // Config command. Replace G-YOUR-ID-HERE with your actual ID.
-      gtag('config', 'G-YOUR-ID-HERE', {
-        send_page_view: false // We will handle page views manually in App.tsx
-      });
+      // gtag('config', 'G-YOUR-ID-HERE'); 
     </script>
 
-    <!-- SEO & Social Sharing -->
-    <title>8ME - Modern Property Management</title>
-    <meta name="description" content="AI-powered property management software. Trust accounting, maintenance tracking, and automated leasing for modern agencies.">
-    <meta property="og:title" content="8ME | Next-Gen Property Software">
-    <meta property="og:description" content="Manage portfolios, automate trust accounting, and streamline maintenance with AI.">
+    <!-- SEO & Social Sharing for 8 Miles Estate -->
+    <title>8 Miles Estate | The Operating System for Modern Agencies</title>
+    <meta name="description" content="Replace PropertyMe and Console with one unified platform. Automated trust accounting, AI maintenance, and mobile inspections for Australian real estate agencies.">
+    <meta name="keywords" content="Property Management Software, Trust Accounting, Real Estate AI, 8 Miles Estate, PropertyMe Alternative">
+    
+    <!-- Open Graph / Facebook / LinkedIn -->
+    <meta property="og:title" content="8 Miles Estate | Next-Gen Property Software">
+    <meta property="og:description" content="Automate your rent roll. Trusted by top Australian agencies for compliant trust accounting and AI-driven workflows.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80">
+    <meta property="og:url" content="https://www.8milesestate.com.au">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80">
+    
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="8 Miles Estate | The Future of PropTech">
+    <meta name="twitter:description" content="Manage portfolios, automate trust accounting, and streamline maintenance with AI.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
@@ -41,10 +47,11 @@
             background-color: #f8fafc;
             overscroll-behavior-y: none;
         }
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 <script type="importmap">
 {
