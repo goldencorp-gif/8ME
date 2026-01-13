@@ -353,6 +353,14 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                     )}
                 </div>
              </div>
+             
+             {/* Microsoft Store 10.8.2 Compliance Disclaimer */}
+             <div className="mt-6 p-4 bg-slate-50 border border-slate-100 rounded-xl text-center">
+                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                   Note: Subscription payments are securely processed by Stripe (a third-party provider) and are not processed through the Microsoft Store commerce system. 
+                   Management of your plan requires an active internet connection.
+                </p>
+             </div>
           </div>
         )}
 

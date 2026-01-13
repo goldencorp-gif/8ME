@@ -203,6 +203,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <svg className={`w-4 h-4 text-slate-500 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
             </button>
+
+            {/* Version Tag */}
+            <div className="text-center pt-1">
+                <span className="text-[10px] text-slate-600 font-mono tracking-widest opacity-60">v1.2.1</span>
+            </div>
         </div>
         </aside>
     </>

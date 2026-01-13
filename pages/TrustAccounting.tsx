@@ -84,41 +84,24 @@ const TrustAccounting: React.FC<TrustAccountingProps> = ({ properties, transacti
   const [eomDate, setEomDate] = useState(new Date().toISOString().split('T')[0]);
   const [auditReport, setAuditReport] = useState<string | null>(null);
 
-  // CHECK PLAN STATUS
-  const isPremium = user?.plan && user.plan !== 'Trial';
-
-  if (!isPremium) {
+  // ACCESS CONTROL: Block Trial/Demo Users
+  if (user?.plan === 'Trial') {
       return (
-          <div className="max-w-4xl mx-auto py-24 text-center">
+          <div className="max-w-4xl mx-auto py-24 text-center animate-in fade-in zoom-in-95 duration-500">
               <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-8 text-slate-400">
                   <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
               </div>
-              <h2 className="text-3xl font-black text-slate-900 mb-4">Demo Restriction</h2>
+              <h2 className="text-3xl font-black text-slate-900 mb-4">Feature Locked</h2>
               <p className="text-slate-500 max-w-lg mx-auto mb-8">
-                  Trust Accounting, including EOM Wizard, Bank Feeds, and Audit Reports, is only available in the full version.
+                  Trust Accounting is a premium feature available to subscribed clients only. <br/><br/>
+                  Demo accounts are limited to Dashboard, Properties, Schedule, and Tenants views.
               </p>
-              <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100 inline-block text-left max-w-sm">
-                  <h4 className="font-bold text-indigo-900 mb-2">Activation Steps:</h4>
-                  <ol className="list-decimal list-inside text-sm text-indigo-800 space-y-2">
-                      <li>Purchase a subscription plan.</li>
-                      <li>Receive your credentials from the Master Admin.</li>
-                      <li>Log in with the new credentials to unlock these features instantly.</li>
-                  </ol>
-              </div>
           </div>
       );
   }
 
-  // Initialize Mock Data & Load Config
+  // Initialize Data
   useEffect(() => {
-    // Only populate if empty to avoid overwriting changes in a real app flow
-    if (bankLines.length === 0) {
-      setBankLines([
-        { id: 'bf1', date: new Date().toISOString().split('T')[0], description: 'CREDIT TRANSFER REF: SMITH RENT', amount: 750.00, type: 'Credit', matchStatus: 'Unmatched' },
-        { id: 'bf2', date: new Date().toISOString().split('T')[0], description: 'DEBIT DIRECT DEBIT SYDNEY WATER', amount: 120.50, type: 'Debit', matchStatus: 'Unmatched' },
-      ]);
-    }
-
     // Load Link from Settings
     const savedAgency = localStorage.getItem('proptrust_agency_settings');
     if (savedAgency) {

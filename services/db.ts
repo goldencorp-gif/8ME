@@ -168,9 +168,9 @@ export const db = {
   },
 
   properties: {
-    list: () => dbRead<Property[]>('properties', MOCK_PROPERTIES),
+    list: () => dbRead<Property[]>('properties', []), // Clients start Empty
     save: async (property: Property) => {
-      const list = await dbRead<Property[]>('properties', MOCK_PROPERTIES);
+      const list = await dbRead<Property[]>('properties', []);
       const index = list.findIndex(p => p.id === property.id);
       const updated = index >= 0 
         ? list.map(p => p.id === property.id ? property : p)
@@ -179,20 +179,20 @@ export const db = {
       return property;
     },
     delete: async (id: string) => {
-      const list = await dbRead<Property[]>('properties', MOCK_PROPERTIES);
+      const list = await dbRead<Property[]>('properties', []);
       await dbWrite('properties', list.filter(p => p.id !== id));
     }
   },
 
   transactions: {
-    list: () => dbRead<Transaction[]>('transactions', MOCK_TRANSACTIONS),
+    list: () => dbRead<Transaction[]>('transactions', []), // Clients start Empty
     create: async (txOrList: Transaction | Transaction[]) => {
-      const list = await dbRead<Transaction[]>('transactions', MOCK_TRANSACTIONS);
+      const list = await dbRead<Transaction[]>('transactions', []);
       const newItems = Array.isArray(txOrList) ? txOrList : [txOrList];
       await dbWrite('transactions', [...newItems, ...list]);
     },
     update: async (tx: Transaction) => {
-      const list = await dbRead<Transaction[]>('transactions', MOCK_TRANSACTIONS);
+      const list = await dbRead<Transaction[]>('transactions', []);
       const updated = list.map(t => t.id === tx.id ? tx : t);
       await dbWrite('transactions', updated);
     },
@@ -203,9 +203,9 @@ export const db = {
   },
 
   maintenance: {
-    list: () => dbRead<MaintenanceTask[]>('maintenance', MOCK_MAINTENANCE),
+    list: () => dbRead<MaintenanceTask[]>('maintenance', []), // Clients start Empty
     save: async (task: MaintenanceTask) => {
-      const list = await dbRead<MaintenanceTask[]>('maintenance', MOCK_MAINTENANCE);
+      const list = await dbRead<MaintenanceTask[]>('maintenance', []);
       const exists = list.find(t => t.id === task.id);
       const updated = exists 
         ? list.map(t => t.id === task.id ? task : t)
@@ -213,7 +213,7 @@ export const db = {
       await dbWrite('maintenance', updated);
     },
     deleteForProperty: async (propId: string) => {
-      const list = await dbRead<MaintenanceTask[]>('maintenance', MOCK_MAINTENANCE);
+      const list = await dbRead<MaintenanceTask[]>('maintenance', []);
       await dbWrite('maintenance', list.filter(t => t.propertyId !== propId));
     }
   },
@@ -240,9 +240,7 @@ export const db = {
   },
 
   logbook: {
-    list: () => dbRead<LogbookEntry[]>('logbook', [
-        { id: 'log-1', date: new Date().toISOString().split('T')[0], vehicle: 'Audi Q5 (ABC-123)', startOdo: 45000, endOdo: 45012, distance: 12, purpose: 'Inspection: 123 Ocean View', category: 'Business', driver: 'Current User' }
-    ]),
+    list: () => dbRead<LogbookEntry[]>('logbook', []), // Clients start Empty
     add: async (entry: LogbookEntry) => {
         const list = await dbRead<LogbookEntry[]>('logbook', []);
         await dbWrite('logbook', [entry, ...list]);
@@ -255,6 +253,34 @@ export const db = {
       const list = await dbRead<HistoryRecord[]>('history', []);
       await dbWrite('history', [record, ...list]);
     }
+  },
+
+  // NEW: DEMO SEEDING (Called only for 'Book Demo' users)
+  seedDemoData: async () => {
+      // 1. Seed Transactions
+      await dbWrite('transactions', MOCK_TRANSACTIONS);
+      
+      // 2. Seed Logbook
+      const mockLog: LogbookEntry = { 
+          id: 'log-1', 
+          date: new Date().toISOString().split('T')[0], 
+          vehicle: 'Audi Q5 (ABC-123)', 
+          startOdo: 45000, 
+          endOdo: 45012, 
+          distance: 12, 
+          purpose: 'Inspection: 123 Ocean View', 
+          category: 'Business', 
+          driver: 'Current User' 
+      };
+      await dbWrite('logbook', [mockLog]);
+
+      // 3. Seed Properties
+      await dbWrite('properties', MOCK_PROPERTIES);
+
+      // 4. Seed Maintenance
+      await dbWrite('maintenance', MOCK_MAINTENANCE);
+
+      console.log("[DB] Demo data seeded successfully.");
   },
 
   // NEW: Backup & Restore Service

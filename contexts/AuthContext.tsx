@@ -104,6 +104,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       credentials[email.toLowerCase()] = hash;
       localStorage.setItem('proptrust_local_auth', JSON.stringify(credentials));
 
+      // SEED DEMO DATA
+      // This is the specific logic for "Demo Users" (Local Registrations).
+      // Paid Client accounts created via Master Console do NOT run this, so they start empty.
+      await db.seedDemoData();
+
       setLocalUserCount(prev => prev + 1);
       
       // Auto Login - New Local Users are ALWAYS 'Trial' (Demo Mode)
