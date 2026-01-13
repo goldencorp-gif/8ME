@@ -190,7 +190,7 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-               <button onClick={onRequestDemo} className="w-full sm:w-auto px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-indigo-50 transition-all shadow-xl active:scale-95 cursor-pointer z-20">
+               <button onClick={() => setShowTermsModal(true)} className="w-full sm:w-auto px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-indigo-50 transition-all shadow-xl active:scale-95 cursor-pointer z-20">
                  Start Free Trial
                </button>
                <button onClick={() => scrollToSection('pricing')} className="w-full sm:w-auto px-8 py-4 bg-slate-800/50 border border-slate-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-slate-800 transition-all active:scale-95 cursor-pointer z-20 flex items-center justify-center">
@@ -436,7 +436,7 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
                       </div>
                     )}
 
-                    <button onClick={onRequestDemo} className="w-full mt-4 py-4 bg-white text-slate-900 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-indigo-50 transition-colors cursor-pointer">Start Trial</button>
+                    <button onClick={() => setShowTermsModal(true)} className="w-full mt-4 py-4 bg-white text-slate-900 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-indigo-50 transition-colors cursor-pointer">Start Trial</button>
                  </div>
 
                  {/* Enterprise */}
@@ -613,7 +613,7 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
 
              <div className="p-6 border-t border-slate-100 bg-white flex justify-end">
                <button 
-                 onClick={() => { setShowTermsModal(false); setAgreedToTerms(true); }}
+                 onClick={() => { setShowTermsModal(false); setAgreedToTerms(true); setShowRegModal(true); }}
                  className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl"
                >
                  I Have Read & Agree
