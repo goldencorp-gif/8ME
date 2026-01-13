@@ -6,13 +6,12 @@ import { db } from '../services/db';
 
 interface LoginProps {
   onBack?: () => void;
+  mode: 'client' | 'demo';
+  onSwitchMode: (mode: 'client' | 'demo') => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onBack }) => {
+const Login: React.FC<LoginProps> = ({ onBack, mode, onSwitchMode }) => {
   const { login, registerLocalUser, localUserCount } = useAuth();
-  
-  // View State
-  const [mode, setMode] = useState<'login' | 'setup'>('login');
   
   // Form States
   const [email, setEmail] = useState('');
@@ -32,13 +31,6 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
 
   // Support Contact Info
   const ADMIN_EMAIL = '8milesestate@gmail.com';
-
-  // Auto-switch to Setup Mode if no users exist
-  useEffect(() => {
-      if (localUserCount === 0) {
-          setMode('setup');
-      }
-  }, [localUserCount]);
 
   useEffect(() => {
     // Check if agency URL is configured in settings
@@ -94,7 +86,7 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
     setError('');
 
     try {
-      if (mode === 'setup') {
+      if (mode === 'demo') {
           if (password.length < 6) {
               setError("Password must be at least 6 characters");
               setLoading(false);
@@ -107,6 +99,7 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
           
           // Register automatically logs in, so no need to redirect manually
       } else {
+          // Client Mode
           const result = await login(email, password);
           if (!result.success) {
             setError(result.error || 'Login failed');
@@ -198,15 +191,15 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
 
         <div className="w-full max-w-md space-y-8">
           <div>
-            {mode === 'setup' ? (
+            {mode === 'demo' ? (
                 <>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Setup Agency Access</h2>
-                    <p className="mt-2 text-slate-500">Create your local administrator account to begin.</p>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Book a Demo</h2>
+                    <p className="mt-2 text-slate-500">Create your local trial account to explore 8ME.</p>
                 </>
             ) : (
                 <>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome back</h2>
-                    <p className="mt-2 text-slate-500">Please sign in to your local workspace.</p>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Client Portal</h2>
+                    <p className="mt-2 text-slate-500">Please sign in with your official agency credentials.</p>
                 </>
             )}
           </div>
@@ -220,7 +213,7 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              {mode === 'setup' && (
+              {mode === 'demo' && (
                   <div className="animate-in fade-in slide-in-from-bottom-2">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name</label>
                     <input 
@@ -252,7 +245,7 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={inputClass}
-                  placeholder={mode === 'setup' ? "Create a secure password" : "••••••••"}
+                  placeholder={mode === 'demo' ? "Create a secure password" : "••••••••"}
                 />
               </div>
             </div>
@@ -262,7 +255,7 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
                 <input type="checkbox" className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                 <span className="font-bold text-slate-500">Remember me</span>
               </label>
-              {mode === 'login' && (
+              {mode === 'client' && (
                   <button 
                     type="button" 
                     onClick={handleForgotPassword} 
@@ -284,37 +277,38 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
-                mode === 'setup' ? 'Create Agency Account' : 'Sign In'
+                mode === 'demo' ? 'Start Free Trial' : 'Sign In'
               )}
             </button>
           </form>
 
-          {/* Import / Reset Actions */}
+          {/* Mode Switch Actions */}
           <div className="pt-6 border-t border-slate-100 flex flex-col items-center gap-3">
-              {localUserCount > 0 && mode === 'login' && (
+              {mode === 'client' ? (
                   <button 
-                    onClick={() => setMode('setup')} 
+                    onClick={() => onSwitchMode('demo')} 
                     className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
                   >
-                      Register New User on this Device
+                      New to 8ME? Book a Demo
                   </button>
-              )}
-              {mode === 'setup' && localUserCount > 0 && (
+              ) : (
                   <button 
-                    onClick={() => setMode('login')} 
+                    onClick={() => onSwitchMode('client')} 
                     className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
                   >
-                      Back to Login
+                      Already a client? Sign In
                   </button>
               )}
               
-              {/* Import Link */}
-              <button 
-                onClick={() => setShowImportModal(true)}
-                className="text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-600 tracking-widest bg-indigo-50 px-3 py-1.5 rounded-full"
-              >
-                Import Account Data
-              </button>
+              {/* Import Link (Only relevant for Clients needing to sync devices) */}
+              {mode === 'client' && (
+                <button 
+                    onClick={() => setShowImportModal(true)}
+                    className="text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-600 tracking-widest bg-indigo-50 px-3 py-1.5 rounded-full"
+                >
+                    Import Account Data
+                </button>
+              )}
           </div>
         </div>
       </div>

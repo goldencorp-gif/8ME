@@ -32,6 +32,9 @@ const App: React.FC = () => {
   
   // Default to 'landing' so the marketing page is the first entry point
   const [viewState, setViewState] = useState<'landing' | 'login' | 'app' | 'privacy' | 'terms'>('landing');
+  
+  // Login Mode State: 'client' (Official) or 'demo' (New User)
+  const [loginMode, setLoginMode] = useState<'client' | 'demo'>('client');
 
   // Handle Initial Route (For Privacy Policy / Terms / Share Target)
   useEffect(() => {
@@ -288,9 +291,9 @@ const App: React.FC = () => {
     showToast('Ledger exported to CSV');
   };
 
-  // Explicitly handle navigation from Landing Page to ensure SPA behavior (no reload)
-  const handleLandingNavigation = (view: 'privacy' | 'terms' | 'login') => {
-    setViewState(view);
+  const handleLoginNavigation = (mode: 'client' | 'demo') => {
+    setLoginMode(mode);
+    setViewState('login');
     window.scrollTo(0, 0);
   };
 
@@ -428,13 +431,19 @@ const App: React.FC = () => {
 
       {viewState === 'landing' && (
         <LandingPage 
-          onLoginClick={() => handleLandingNavigation('login')} 
-          onRequestDemo={() => handleLandingNavigation('login')} 
-          onNavigate={(view) => handleLandingNavigation(view)} 
+          onLoginClick={() => handleLoginNavigation('client')} 
+          onRequestDemo={() => handleLoginNavigation('demo')} 
+          onNavigate={(view) => { setViewState(view); window.scrollTo(0, 0); }} 
         />
       )}
       
-      {viewState === 'login' && <Login onBack={() => setViewState('landing')} />}
+      {viewState === 'login' && (
+        <Login 
+            mode={loginMode} 
+            onBack={() => setViewState('landing')} 
+            onSwitchMode={(m) => setLoginMode(m)}
+        />
+      )}
 
       {viewState === 'app' && (
         <div className="flex min-h-screen bg-slate-50">
