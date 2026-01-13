@@ -106,8 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setLocalUserCount(prev => prev + 1);
       
-      // Auto Login - Default to 'Trial' so restrictions apply to new users immediately
-      // Use 'Growth' or 'Enterprise' to unlock full features.
+      // Auto Login - New Local Users are ALWAYS 'Trial' (Demo Mode)
+      // They must be upgraded via Master Console to become Clients.
       finishLogin({ name, email, title: 'Agency Admin', phone: '', plan: 'Trial' }, 'Admin');
   };
 
@@ -158,10 +158,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }
 
-    // --- LEVEL 2: CENTRAL REGISTRY CHECK (Payment/Status Validation) ---
-    // Check if the agency exists in the Master's Central Registry first.
+    // --- LEVEL 2: CLIENT LOGIN (Central Registry Check) ---
+    // Accounts created in Master Console (Paid Clients).
+    // Access Level: FOLLOWS SUBSCRIPTION (Starter/Growth/Enterprise).
     const centralAgency = await db.centralRegistry.getAgencyByEmail(email);
-    let plan: 'Trial' | 'Starter' | 'Growth' | 'Enterprise' = 'Trial'; // Default to Trial if not found/local
 
     if (centralAgency) {
         // Enforce Status
@@ -172,29 +172,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return { success: false, error: 'Account Temporarily Paused. Contact Admin.' };
         }
         
-        plan = centralAgency.subscriptionPlan;
-
-        // Verify password against central registry if provided there (Master issued credentials)
+        // Verify password against central registry
+        // This ensures the user is using the specific Client credentials issued by 8ME
         if (centralAgency.passwordHash) {
              const inputHash = await hashPassword(password || '');
-             if (inputHash !== centralAgency.passwordHash) {
-                 return { success: false, error: 'Invalid credentials.' };
+             if (inputHash === centralAgency.passwordHash) {
+                 // Login success - Full Access based on Plan
+                 finishLogin({
+                    name: centralAgency.name,
+                    email: centralAgency.contactEmail,
+                    title: 'Agency Principal',
+                    phone: '',
+                    plan: centralAgency.subscriptionPlan // Respects 'Growth'/'Enterprise'
+                 }, 'Admin');
+                 return { success: true };
              }
-             
-             // Login success - Sync central details to local context
-             finishLogin({
-                name: centralAgency.name,
-                email: centralAgency.contactEmail,
-                title: 'Agency Principal',
-                phone: '',
-                plan: centralAgency.subscriptionPlan
-             }, 'Admin');
-             return { success: true };
         }
     }
 
-    // --- LEVEL 3: LOCAL DEVICE ACCOUNT (Legacy/Offline Mode) ---
-    // If not in central registry OR central registry doesn't enforce password, check local storage.
+    // --- LEVEL 3: DEMO ACCESS (Local Device Account) ---
+    // Accounts created via "Book Demo" / Local Setup.
+    // Access Level: STRICTLY TRIAL.
     if (!password) return { success: false, error: 'Password required' };
 
     const credentials = JSON.parse(localStorage.getItem('proptrust_local_auth') || '{}');
@@ -210,17 +208,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (localUser) {
                 if (localUser.status !== 'Active') return { success: false, error: 'Account Suspended' };
                 
-                // If the user has a stored profile plan, use it, otherwise fallback to Trial
-                // We re-read the plan from the stored profile to preserve existing users' access
-                const existingProfile = JSON.parse(localStorage.getItem('proptrust_user_profile') || '{}');
-                const userPlan = existingProfile.email === email && existingProfile.plan ? existingProfile.plan : 'Trial';
-
+                // FORCE TRIAL FOR LOCAL LOGINS
+                // Even if they had a different plan cached, local authentication implies Demo/Trial.
+                // To access full features, they must use Client Credentials (Level 2).
                 finishLogin({
                     name: localUser.name,
                     email: localUser.email,
                     title: 'Agency Admin',
                     phone: '',
-                    plan: userPlan 
+                    plan: 'Trial' 
                 }, localUser.role);
                 return { success: true };
             }
@@ -229,12 +225,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // FALLBACK DEMO ACCOUNT
     if (email === 'alex.manager@8me.com') {
-         const demoProfile = { name: 'Alex Manager', email, title: 'Demo User', phone: '', plan: 'Growth' as const };
+         const demoProfile = { name: 'Alex Manager', email, title: 'Demo User', phone: '', plan: 'Trial' as const };
          finishLogin(demoProfile, 'Admin');
          return { success: true };
     }
 
-    return { success: false, error: 'Invalid credentials for this device.' };
+    return { success: false, error: 'Invalid credentials. If you are a client, please check your issued password.' };
   };
 
   const finishLogin = (profile: UserProfile, role: string) => {

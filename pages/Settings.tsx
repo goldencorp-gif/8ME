@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, UserAccount } from '../types';
 import { db } from '../services/db';
 import { getStripeConfig } from '../services/stripeService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SettingsProps {
   userProfile: UserProfile;
@@ -23,6 +25,7 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users, onUpdateUsers }) => {
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'billing' | 'integrations'>('profile');
   
   // Agency Config
@@ -100,27 +103,26 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
           const agency = await db.centralRegistry.getAgencyByEmail(userProfile.email);
 
           if (agency && agency.passwordHash === hash) {
-              // 3. Verify the plan matches (or just upgrade them to whatever the Admin set)
+              // 3. Verify the plan matches
               const newPlan = agency.subscriptionPlan;
               
               if (pendingPlan && newPlan !== pendingPlan) {
-                  // If Admin set a different plan than clicked, warn but allow
                   console.warn(`Plan mismatch. User selected ${pendingPlan}, Admin issued ${newPlan}. Upgrading to ${newPlan}.`);
               }
 
               // 4. Update Local Settings
               setAgencyDetails(prev => ({ ...prev, subscriptionPlan: newPlan }));
               
-              // 5. Update User Profile to Unlock Features
-              onUpdateProfile({
-                  ...userProfile,
-                  plan: newPlan
-              });
-
+              // 5. IMPORTANT: Prompt re-login to switch from Demo Auth to Client Auth
+              alert(`Activation Successful! Your agency is now upgraded to ${newPlan}.\n\nPlease Sign Out and log in with your email and this Activation Key to unlock full permanent access.`);
+              
               setShowPaymentModal(false);
               setPendingPlan(null);
               setActivationKey('');
-              alert(`Activation Successful! Your agency is now on the ${newPlan} plan.`);
+              
+              // Optional: Auto-logout or allow them to continue in current session (AuthContext handles current session update, but next login requires Client creds)
+              onUpdateProfile({ ...userProfile, plan: newPlan });
+
           } else {
               alert("Invalid Activation Key. Please ensure payment is confirmed and you are using the key emailed by support.");
           }
