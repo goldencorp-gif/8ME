@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { generatePropertyDescription, analyzeArrearsMessage, parseInvoiceRequest, generateQuoteRequestEmail, generateBackgroundCheck, generatePrivacyConsent, generateLeaseAppraisal, generateSalesAppraisal, generateProspectingMessage } from '../services/geminiService';
 import { Property, Transaction, PropertyDocument } from '../types';
 import { useAuth } from '../contexts/AuthContext'; // Import Auth
@@ -12,6 +12,8 @@ interface AIToolsProps {
 
 const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, onUpdateProperty }) => {
   const { user } = useAuth(); // Get user to check plan
+  const [hasApiKey, setHasApiKey] = useState(true);
+  const resultRef = useRef<HTMLDivElement>(null);
   
   const [address, setAddress] = useState('');
   const [features, setFeatures] = useState('');
@@ -76,6 +78,38 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
   const [prospectType, setProspectType] = useState('Letterbox Drop');
   const [prospectHook, setProspectHook] = useState('');
 
+  // Check for API Key on mount
+  useEffect(() => {
+    const checkKey = () => {
+        try {
+            const settings = localStorage.getItem('proptrust_agency_settings');
+            if (settings) {
+                const parsed = JSON.parse(settings);
+                if (parsed.aiApiKey && parsed.aiApiKey.length > 5) {
+                    setHasApiKey(true);
+                    return;
+                }
+            }
+            // Check if env var exists (for dev mode or hardcoded builds)
+            if (process.env.API_KEY && process.env.API_KEY.length > 5) {
+                setHasApiKey(true);
+                return;
+            }
+        } catch (e) {}
+        setHasApiKey(false);
+    };
+    checkKey();
+  }, []);
+
+  // Auto-Scroll to Result when content appears
+  useEffect(() => {
+    if (!loading && (result || invoiceData || checkResult)) {
+        setTimeout(() => {
+            resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+  }, [loading, result, invoiceData, checkResult]);
+
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400";
 
   // CHECK PLAN STATUS
@@ -103,32 +137,45 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
       );
   }
 
+  const handleError = (e: any) => {
+      console.error(e);
+      alert(`AI Generation Failed:\n\n${e.message || 'Unknown Error'}\n\nPlease check your API Key in Settings.`);
+  };
+
+  const clearResults = () => {
+      setResult('');
+      setInvoiceData(null);
+      setCheckResult(null);
+  };
+
   const handleGenerateListing = async () => {
     if (!address) return;
+    clearResults();
     setLoading(true);
-    const desc = await generatePropertyDescription(address, features.split(',').map(f => f.trim()));
-    setResult(desc || 'Failed');
+    try {
+        const desc = await generatePropertyDescription(address, features.split(',').map(f => f.trim()));
+        setResult(desc || 'Failed to generate');
+    } catch (e) { handleError(e); }
     setLoading(false);
-    setInvoiceData(null);
-    setCheckResult(null);
   };
 
   const handleGenerateArrears = async () => {
     if (!arrearsTenantName || !arrearsAmount) return;
+    clearResults();
     setLoading(true);
-    const msg = await analyzeArrearsMessage(
-      arrearsTenantName, 
-      parseFloat(arrearsAmount), 
-      parseInt(arrearsDays) || 0,
-      arrearsAddress,
-      arrearsItem,
-      arrearsDeadline,
-      arrearsPaymentMethod
-    );
-    setResult(msg || 'Failed');
+    try {
+        const msg = await analyzeArrearsMessage(
+          arrearsTenantName, 
+          parseFloat(arrearsAmount), 
+          parseInt(arrearsDays) || 0,
+          arrearsAddress,
+          arrearsItem,
+          arrearsDeadline,
+          arrearsPaymentMethod
+        );
+        setResult(msg || 'Failed to generate');
+    } catch (e) { handleError(e); }
     setLoading(false);
-    setInvoiceData(null);
-    setCheckResult(null);
   };
 
   const handleGenerateQuote = async () => {
@@ -136,12 +183,13 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
     const prop = properties.find(p => p.id === quotePropertyId);
     if (!prop) return;
 
+    clearResults();
     setLoading(true);
-    const msg = await generateQuoteRequestEmail(quoteTradesman, prop.address, quoteIssue);
-    setResult(msg || 'Failed');
+    try {
+        const msg = await generateQuoteRequestEmail(quoteTradesman, prop.address, quoteIssue);
+        setResult(msg || 'Failed to generate');
+    } catch (e) { handleError(e); }
     setLoading(false);
-    setInvoiceData(null);
-    setCheckResult(null);
   };
 
   const handleGenerateInvoice = async () => {
@@ -154,27 +202,40 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
         return;
     }
     
+    if (!hasApiKey) {
+        alert("AI API Key is missing. Please go to Settings to configure it.");
+        return;
+    }
+
     const prop = properties.find(p => p.id === invPropertyId);
     if (!prop) return;
 
+    clearResults();
     setLoading(true);
-    // strip header from base64 if present for API
+    // cleanTemplate is just the base64 string for the API call
     const cleanTemplate = templateFile ? templateFile.split(',')[1] : undefined;
     
     try {
         const data = await parseInvoiceRequest(invDescription, prop.address, invRecipient, invDate, cleanTemplate);
-        
-        // Check if data is valid (simple check)
         if (data && (data.invoiceNumber || (data.items && data.items.length > 0))) {
+            
+            // INJECT IMAGE: Replace {{BG_IMAGE}} with the actual data URL from state
+            if (data.customHtml && templateFile) {
+                // Ensure placeholder exists before replacement
+                if (data.customHtml.includes('{{BG_IMAGE}}')) {
+                    data.customHtml = data.customHtml.replace(/{{BG_IMAGE}}/g, templateFile);
+                } else {
+                    // Fallback injection if AI missed the placeholder instruction
+                    data.customHtml = `<div style="background-image: url('${templateFile}'); background-size: 100% auto; background-repeat: no-repeat; width: 100%; min-height: 1000px; position: relative;">${data.customHtml}</div>`;
+                }
+            }
+
             setInvoiceData(data);
-            setResult(''); 
-            setCheckResult(null);
         } else {
-            alert("Failed to generate invoice details. Please ensure the description is clear and try again.");
+            alert("Failed to generate invoice details. Please ensure your API Key is valid and the description is clear.");
         }
     } catch (e) {
-        console.error("Invoice Gen Error:", e);
-        alert("An error occurred while generating the invoice. Please try again.");
+        handleError(e);
     } finally {
         setLoading(false);
     }
@@ -182,25 +243,19 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
 
   const handleBackgroundCheck = async () => {
     if (!checkName || !checkId) return;
+    clearResults();
     setLoading(true);
-    const data = await generateBackgroundCheck(checkName, checkId, checkAddress);
-    
-    // Add timestamp to result
-    const resultWithTimestamp = {
-      ...data,
-      timestamp: new Date().toLocaleString('en-AU', { 
-        day: 'numeric', 
-        month: 'short', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
-    };
-
-    setCheckResult(resultWithTimestamp);
-    setIsPrivacyMode(true); // Default to privacy mode on new search
-    setResult('');
-    setInvoiceData(null);
+    try {
+        const data = await generateBackgroundCheck(checkName, checkId, checkAddress);
+        const resultWithTimestamp = {
+          ...data,
+          timestamp: new Date().toLocaleString('en-AU', { 
+            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+          })
+        };
+        setCheckResult(resultWithTimestamp);
+        setIsPrivacyMode(true);
+    } catch (e) { handleError(e); }
     setLoading(false);
   };
 
@@ -213,7 +268,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
     const newDoc: PropertyDocument = {
       id: `DOC-CHECK-${Date.now()}`,
       name: `Screening_Report_${checkName.replace(/\s+/g, '_')}.pdf`,
-      category: 'Applications', // Changed from Legal to Applications
+      category: 'Applications',
       type: 'PDF',
       dateAdded: new Date().toISOString().split('T')[0],
       size: '150 KB',
@@ -239,60 +294,64 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
 
   const handleGenerateConsent = async () => {
     if (!consentApplicant || !consentAddress) return;
+    clearResults();
     setLoading(true);
-    const text = await generatePrivacyConsent(agencyName, consentApplicant, consentAddress);
-    setResult(text || 'Failed');
+    try {
+        const text = await generatePrivacyConsent(agencyName, consentApplicant, consentAddress);
+        setResult(text || 'Failed');
+    } catch (e) { handleError(e); }
     setLoading(false);
-    setInvoiceData(null);
-    setCheckResult(null);
   };
 
   const handleGenerateAppraisal = async () => {
     if (!appraisalAddress) return;
+    clearResults();
     setLoading(true);
-    const text = await generateLeaseAppraisal(
-        appraisalAddress, 
-        appraisalType, 
-        appraisalBeds, 
-        appraisalBaths, 
-        appraisalCars, 
-        appraisalFeatures.split(',').map(f => f.trim())
-    );
-    setResult(text || 'Failed');
+    try {
+        const text = await generateLeaseAppraisal(
+            appraisalAddress, 
+            appraisalType, 
+            appraisalBeds, 
+            appraisalBaths, 
+            appraisalCars, 
+            appraisalFeatures.split(',').map(f => f.trim())
+        );
+        setResult(text || 'Failed');
+    } catch (e) { handleError(e); }
     setLoading(false);
-    setInvoiceData(null);
-    setCheckResult(null);
   };
 
   const handleGenerateSalesAppraisal = async () => {
     if (!salesAddress) return;
+    clearResults();
     setLoading(true);
-    const text = await generateSalesAppraisal(
-        salesAddress,
-        salesType,
-        salesBeds,
-        salesBaths,
-        salesCars,
-        salesFeatures.split(',').map(f => f.trim())
-    );
-    setResult(text || 'Failed');
+    try {
+        const text = await generateSalesAppraisal(
+            salesAddress,
+            salesType,
+            salesBeds,
+            salesBaths,
+            salesCars,
+            salesFeatures.split(',').map(f => f.trim())
+        );
+        setResult(text || 'Failed');
+    } catch (e) { handleError(e); }
     setLoading(false);
-    setInvoiceData(null);
-    setCheckResult(null);
   };
 
   const handleGenerateProspecting = async () => {
     if (!prospectArea || !prospectHook) return;
+    clearResults();
     setLoading(true);
-    const text = await generateProspectingMessage(
-      prospectArea,
-      prospectType,
-      prospectHook
-    );
-    setResult(text || 'Failed');
+    try {
+        const text = await generateProspectingMessage(
+          prospectArea,
+          prospectType,
+          prospectHook
+        );
+        setResult(text || 'Failed');
+    } catch (e) { handleError(e); }
     setLoading(false);
-    setInvoiceData(null);
-    setCheckResult(null);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -355,6 +414,23 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
+      
+      {/* API Key Warning Banner */}
+      {!hasApiKey && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="bg-amber-100 p-2 rounded-lg text-amber-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <div>
+                    <h4 className="font-bold text-amber-900 text-sm">Gemini API Key Missing</h4>
+                    <p className="text-xs text-amber-700">AI tools will not function without a valid API Key. Please add it in Settings.</p>
+                </div>
+            </div>
+            <div className="text-xs font-bold text-amber-600">Go to Settings &rarr;</div>
+        </div>
+      )}
+
       <div className="text-center">
         <h2 className="text-3xl font-bold text-slate-900">AI Property Assistant</h2>
         <p className="text-slate-500 mt-2">Generate listings, draft communications, and analyze portfolio data with Gemini 3.</p>
@@ -476,7 +552,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           
           <button 
             onClick={handleGenerateInvoice}
-            disabled={loading || (isCustomTemplate && !templateFile)}
+            disabled={loading || (isCustomTemplate && !templateFile) || !hasApiKey}
             className="w-full mt-6 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-emerald-200"
           >
             {loading ? 'Processing...' : isCustomTemplate ? 'Fill Custom Form' : 'Draft Invoice'}
@@ -514,7 +590,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           </div>
           <button 
             onClick={handleGenerateListing}
-            disabled={loading}
+            disabled={loading || !hasApiKey}
             className="w-full mt-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-indigo-200"
           >
             {loading ? 'Thinking...' : 'Generate Description'}
@@ -555,7 +631,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
               <input type="text" value={arrearsAddress} onChange={e => setArrearsAddress(e.target.value)} placeholder="Full Address" className={inputClass} />
             </div>
           </div>
-          <button onClick={handleGenerateArrears} disabled={loading} className="w-full mt-6 py-3 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-rose-200">
+          <button onClick={handleGenerateArrears} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-rose-200">
             {loading ? 'Drafting...' : 'Draft Breach Notice'}
           </button>
         </div>
@@ -585,7 +661,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
               <textarea value={quoteIssue} onChange={e => setQuoteIssue(e.target.value)} className={`${inputClass} h-24`} />
             </div>
           </div>
-          <button onClick={handleGenerateQuote} disabled={loading} className="w-full mt-6 py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-amber-200">
+          <button onClick={handleGenerateQuote} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-amber-200">
             {loading ? 'Drafting...' : 'Draft Quote Request'}
           </button>
         </div>
@@ -629,7 +705,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
               </select>
             </div>
           </div>
-          <button onClick={handleBackgroundCheck} disabled={loading} className="w-full mt-6 py-3 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-violet-200">
+          <button onClick={handleBackgroundCheck} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-violet-200">
             {loading ? 'Searching...' : 'Run Background Check'}
           </button>
         </div>
@@ -681,7 +757,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           </div>
           <button 
             onClick={handleGenerateProspecting}
-            disabled={loading}
+            disabled={loading || !hasApiKey}
             className="w-full mt-6 py-3 bg-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-orange-200"
           >
             {loading ? 'Drafting...' : 'Generate Campaign'}
@@ -705,7 +781,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
             </div>
             <textarea placeholder="Features (e.g. Pool, View)" value={appraisalFeatures} onChange={e => setAppraisalFeatures(e.target.value)} className={`${inputClass} h-20`} />
           </div>
-          <button onClick={handleGenerateAppraisal} disabled={loading} className="w-full mt-6 py-3 bg-cyan-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-cyan-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-cyan-200">
+          <button onClick={handleGenerateAppraisal} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-cyan-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-cyan-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-cyan-200">
             {loading ? 'Valuing...' : 'Generate Appraisal'}
           </button>
         </div>
@@ -727,7 +803,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
             </div>
             <textarea placeholder="Features (e.g. Renovated)" value={salesFeatures} onChange={e => setSalesFeatures(e.target.value)} className={`${inputClass} h-20`} />
           </div>
-          <button onClick={handleGenerateSalesAppraisal} disabled={loading} className="w-full mt-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-blue-200">
+          <button onClick={handleGenerateSalesAppraisal} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-blue-200">
             {loading ? 'Valuing...' : 'Generate Sales Report'}
           </button>
         </div>
@@ -750,214 +826,220 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
               <input type="text" value={consentAddress} onChange={e => setConsentAddress(e.target.value)} className={inputClass} />
             </div>
           </div>
-          <button onClick={handleGenerateConsent} disabled={loading} className="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 disabled:bg-slate-300 transition-colors shadow-lg">
+          <button onClick={handleGenerateConsent} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 disabled:bg-slate-300 transition-colors shadow-lg">
             {loading ? 'Generating...' : 'Create Consent Form'}
           </button>
         </div>
 
       </div>
 
-      {/* Result: Invoice Generator */}
-      {invoiceData && (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-8">
-           {/* ... Invoice Result Content (No changes here) ... */}
-           <div className="bg-slate-900 text-white px-8 py-6 flex justify-between items-start">
-             <div>
-               <div className="mb-6">
-                  <div className="flex items-center space-x-3 mb-2">
-                     {logoUrl && !invoiceData.customHtml ? (
-                       <img src={logoUrl} alt="Company Logo" className="h-12 w-auto object-contain rounded-lg bg-white p-1" />
-                     ) : !invoiceData.customHtml ? (
-                       <div className="flex items-center space-x-3">
-                         <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/50">
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                         </div>
-                       </div>
-                     ) : null}
-                     <div>
-                        <h1 className="text-xl font-bold tracking-tight leading-none text-white">{agencyName}</h1>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">Real Estate Agency</p>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="flex items-center space-x-3">
-                 <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${invRecipient === 'Owner' ? 'bg-indigo-500' : 'bg-emerald-500'}`}>{invRecipient} Invoice</span>
-                 <span className="font-mono text-sm opacity-70">#{invoiceData.invoiceNumber}</span>
-               </div>
-             </div>
-             <button onClick={() => setInvoiceData(null)} className="text-white/50 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-           </div>
-           
-           <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
-             <div>
-                <h4 className="text-xl font-bold text-slate-900 mb-6">Invoice Preview</h4>
-                
-                {invoiceData.customHtml ? (
-                  <div className="border-2 border-slate-200 rounded-xl overflow-hidden h-[500px] w-full relative group">
-                     <iframe 
-                        srcDoc={invoiceData.customHtml} 
-                        className="w-full h-full"
-                        title="Generated Invoice"
-                     />
-                     <div className="absolute top-2 right-2 bg-black/70 text-white px-3 py-1 text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                       AI Generated Layout
-                     </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4">
-                      {(invoiceData.items || []).map((item: any, idx: number) => (
-                        <div key={idx} className="flex justify-between py-3 border-b border-slate-100">
-                          <span className="text-sm font-medium text-slate-600">{item.description}</span>
-                          <span className="text-sm font-bold text-slate-900">${item.amount.toFixed(2)}</span>
+      {/* Results Container with Ref for Auto-Scrolling */}
+      <div ref={resultRef} className="scroll-mt-8">
+        
+        {/* Result: Invoice Generator */}
+        {invoiceData && (
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-8">
+            {/* ... Invoice Result Content ... */}
+            {/* (Content hidden for brevity, same as previous) */}
+            <div className="bg-slate-900 text-white px-8 py-6 flex justify-between items-start">
+                <div>
+                <div className="mb-6">
+                    <div className="flex items-center space-x-3 mb-2">
+                        {logoUrl && !invoiceData.customHtml ? (
+                        <img src={logoUrl} alt="Company Logo" className="h-12 w-auto object-contain rounded-lg bg-white p-1" />
+                        ) : !invoiceData.customHtml ? (
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/50">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                            </div>
                         </div>
-                      ))}
-                      <div className="flex justify-between pt-4">
-                        <span className="text-base font-bold text-slate-900">Total Due</span>
-                        <span className="text-2xl font-black text-indigo-600">${invoiceData.totalAmount.toFixed(2)}</span>
-                      </div>
+                        ) : null}
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight leading-none text-white">{agencyName}</h1>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">Real Estate Agency</p>
+                        </div>
                     </div>
-                    <div className="mt-6 flex space-x-2 text-xs text-slate-400">
-                      <span>Date: {invoiceData.date}</span>
-                      <span>•</span>
-                      <span>Due: {invoiceData.dueDate}</span>
-                    </div>
-                  </>
-                )}
-             </div>
-             
-             <div className="bg-slate-50 rounded-3xl p-8 flex flex-col justify-center items-center text-center">
-                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
-                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
-                <h5 className="font-bold text-slate-900 mb-2">Issue Invoice</h5>
-                <p className="text-sm text-slate-500 mb-6 max-w-xs">This will save the document to the property vault as <strong>Unpaid</strong>. You can record the payment transaction later from the document viewer.</p>
+
+                <div className="flex items-center space-x-3">
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${invRecipient === 'Owner' ? 'bg-indigo-500' : 'bg-emerald-500'}`}>{invRecipient} Invoice</span>
+                    <span className="font-mono text-sm opacity-70">#{invoiceData.invoiceNumber}</span>
+                </div>
+                </div>
+                <button onClick={() => setInvoiceData(null)} className="text-white/50 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            
+            <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div>
+                    <h4 className="text-xl font-bold text-slate-900 mb-6">Invoice Preview</h4>
+                    
+                    {invoiceData.customHtml ? (
+                    <div className="border-2 border-slate-200 rounded-xl overflow-hidden h-[500px] w-full relative group">
+                        <iframe 
+                            srcDoc={invoiceData.customHtml} 
+                            className="w-full h-full"
+                            title="Generated Invoice"
+                        />
+                        <div className="absolute top-2 right-2 bg-black/70 text-white px-3 py-1 text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        AI Generated Layout
+                        </div>
+                    </div>
+                    ) : (
+                    <>
+                        <div className="space-y-4">
+                        {(invoiceData.items || []).map((item: any, idx: number) => (
+                            <div key={idx} className="flex justify-between py-3 border-b border-slate-100">
+                            <span className="text-sm font-medium text-slate-600">{item.description}</span>
+                            <span className="text-sm font-bold text-slate-900">${item.amount.toFixed(2)}</span>
+                            </div>
+                        ))}
+                        <div className="flex justify-between pt-4">
+                            <span className="text-base font-bold text-slate-900">Total Due</span>
+                            <span className="text-2xl font-black text-indigo-600">${invoiceData.totalAmount.toFixed(2)}</span>
+                        </div>
+                        </div>
+                        <div className="mt-6 flex space-x-2 text-xs text-slate-400">
+                        <span>Date: {invoiceData.date}</span>
+                        <span>•</span>
+                        <span>Due: {invoiceData.dueDate}</span>
+                        </div>
+                    </>
+                    )}
+                </div>
                 
+                <div className="bg-slate-50 rounded-3xl p-8 flex flex-col justify-center items-center text-center">
+                    <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <h5 className="font-bold text-slate-900 mb-2">Issue Invoice</h5>
+                    <p className="text-sm text-slate-500 mb-6 max-w-xs">This will save the document to the property vault as <strong>Unpaid</strong>. You can record the payment transaction later from the document viewer.</p>
+                    
+                    <button 
+                    onClick={handleApproveInvoice}
+                    className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl hover:bg-emerald-700 active:scale-95 transition-all w-full md:w-auto"
+                    >
+                    Save to Vault
+                    </button>
+                </div>
+            </div>
+            </div>
+        )}
+
+        {/* Result: Background Check */}
+        {checkResult && (
+            <div className="bg-white p-8 rounded-[2rem] border border-violet-200 shadow-2xl shadow-violet-500/10 animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                <h3 className="text-2xl font-bold text-slate-900">Screening Report</h3>
+                <div className="flex flex-col">
+                    <p className="text-slate-500 text-sm">Applicant: {checkName}</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Run on: {checkResult.timestamp}</p>
+                </div>
+                </div>
+                <div className="flex items-center space-x-3">
                 <button 
-                  onClick={handleApproveInvoice}
-                  className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl hover:bg-emerald-700 active:scale-95 transition-all w-full md:w-auto"
+                    onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                    className="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-slate-100"
+                    title={isPrivacyMode ? "Reveal Sensitive Data" : "Hide Sensitive Data"}
                 >
-                  Save to Vault
+                    {isPrivacyMode ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    )}
                 </button>
-             </div>
-           </div>
-        </div>
-      )}
-
-      {/* Result: Background Check */}
-      {checkResult && (
-        <div className="bg-white p-8 rounded-[2rem] border border-violet-200 shadow-2xl shadow-violet-500/10 animate-in zoom-in-95 duration-300">
-          <div className="flex justify-between items-start mb-6">
-             <div>
-               <h3 className="text-2xl font-bold text-slate-900">Screening Report</h3>
-               <div className="flex flex-col">
-                 <p className="text-slate-500 text-sm">Applicant: {checkName}</p>
-                 <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Run on: {checkResult.timestamp}</p>
-               </div>
-             </div>
-             <div className="flex items-center space-x-3">
-               <button 
-                 onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                 className="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-slate-100"
-                 title={isPrivacyMode ? "Reveal Sensitive Data" : "Hide Sensitive Data"}
-               >
-                 {isPrivacyMode ? (
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                 ) : (
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                 )}
-               </button>
-               <button onClick={() => setCheckResult(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-               </button>
-             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Credit Score</p>
-               <div className="flex items-baseline space-x-2">
-                 <span className={`text-4xl font-black ${checkResult.creditScore >= 700 ? 'text-emerald-600' : checkResult.creditScore >= 500 ? 'text-amber-500' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-md select-none opacity-50' : 'blur-0 opacity-100'}`}>
-                   {checkResult.creditScore}
-                 </span>
-                 <span className="text-sm font-bold text-slate-500">/ 850</span>
-               </div>
-               <p className={`text-xs font-bold mt-1 ${checkResult.creditScore >= 700 ? 'text-emerald-600' : 'text-slate-500'}`}>{checkResult.creditRating}</p>
+                <button onClick={() => setCheckResult(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                </div>
             </div>
 
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Database Hits</p>
-               <ul className="space-y-2 text-sm font-bold">
-                  <li className="flex justify-between items-center h-6">
-                    <span>Tenancy DB</span>
-                    <span className={`${checkResult.databases?.tenancyDatabase === 'Clear' ? 'text-emerald-600' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-sm select-none opacity-50' : 'blur-0 opacity-100'}`}>
-                      {checkResult.databases?.tenancyDatabase}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Credit Score</p>
+                <div className="flex items-baseline space-x-2">
+                    <span className={`text-4xl font-black ${checkResult.creditScore >= 700 ? 'text-emerald-600' : checkResult.creditScore >= 500 ? 'text-amber-500' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-md select-none opacity-50' : 'blur-0 opacity-100'}`}>
+                    {checkResult.creditScore}
                     </span>
-                  </li>
-                  <li className="flex justify-between items-center h-6">
-                    <span>Bankruptcy</span>
-                    <span className={`${checkResult.databases?.bankruptcy === 'Clear' ? 'text-emerald-600' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-sm select-none opacity-50' : 'blur-0 opacity-100'}`}>
-                      {checkResult.databases?.bankruptcy}
+                    <span className="text-sm font-bold text-slate-500">/ 850</span>
+                </div>
+                <p className={`text-xs font-bold mt-1 ${checkResult.creditScore >= 700 ? 'text-emerald-600' : 'text-slate-500'}`}>{checkResult.creditRating}</p>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Database Hits</p>
+                <ul className="space-y-2 text-sm font-bold">
+                    <li className="flex justify-between items-center h-6">
+                        <span>Tenancy DB</span>
+                        <span className={`${checkResult.databases?.tenancyDatabase === 'Clear' ? 'text-emerald-600' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-sm select-none opacity-50' : 'blur-0 opacity-100'}`}>
+                        {checkResult.databases?.tenancyDatabase}
+                        </span>
+                    </li>
+                    <li className="flex justify-between items-center h-6">
+                        <span>Bankruptcy</span>
+                        <span className={`${checkResult.databases?.bankruptcy === 'Clear' ? 'text-emerald-600' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-sm select-none opacity-50' : 'blur-0 opacity-100'}`}>
+                        {checkResult.databases?.bankruptcy}
+                        </span>
+                    </li>
+                    <li className="flex justify-between items-center h-6">
+                        <span>Court Records</span>
+                        <span className={`${checkResult.databases?.courtRecords === 'Clear' ? 'text-emerald-600' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-sm select-none opacity-50' : 'blur-0 opacity-100'}`}>
+                        {checkResult.databases?.courtRecords}
+                        </span>
+                    </li>
+                </ul>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Risk Assessment</p>
+                <div>
+                    <span className={`inline-block px-4 py-2 rounded-xl text-lg font-black uppercase tracking-wide ${checkResult.riskLevel === 'Low' ? 'bg-emerald-100 text-emerald-700' : checkResult.riskLevel === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                        {checkResult.riskLevel} Risk
                     </span>
-                  </li>
-                  <li className="flex justify-between items-center h-6">
-                    <span>Court Records</span>
-                    <span className={`${checkResult.databases?.courtRecords === 'Clear' ? 'text-emerald-600' : 'text-rose-600'} transition-all duration-500 ${isPrivacyMode ? 'blur-sm select-none opacity-50' : 'blur-0 opacity-100'}`}>
-                      {checkResult.databases?.courtRecords}
-                    </span>
-                  </li>
-               </ul>
+                </div>
+                </div>
             </div>
 
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
-               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Risk Assessment</p>
-               <div>
-                  <span className={`inline-block px-4 py-2 rounded-xl text-lg font-black uppercase tracking-wide ${checkResult.riskLevel === 'Low' ? 'bg-emerald-100 text-emerald-700' : checkResult.riskLevel === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                     {checkResult.riskLevel} Risk
-                  </span>
-               </div>
+            <div className="bg-violet-50 p-6 rounded-2xl border border-violet-100">
+                <h4 className="text-xs font-black uppercase tracking-widest text-violet-600 mb-2">Summary</h4>
+                <p className="text-slate-700 text-sm font-medium leading-relaxed">{checkResult.summary}</p>
             </div>
-          </div>
-
-          <div className="bg-violet-50 p-6 rounded-2xl border border-violet-100">
-             <h4 className="text-xs font-black uppercase tracking-widest text-violet-600 mb-2">Summary</h4>
-             <p className="text-slate-700 text-sm font-medium leading-relaxed">{checkResult.summary}</p>
-          </div>
-          
-          <div className="mt-6 flex justify-end items-center space-x-4">
-             {checkPropertyId ? (
+            
+            <div className="mt-6 flex justify-end items-center space-x-4">
+                {checkPropertyId ? (
                 <button 
-                  onClick={handleSaveScreeningReport}
-                  className="px-6 py-3 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 shadow-xl shadow-violet-200 transition-all active:scale-95 flex items-center space-x-2"
+                    onClick={handleSaveScreeningReport}
+                    className="px-6 py-3 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 shadow-xl shadow-violet-200 transition-all active:scale-95 flex items-center space-x-2"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-                  <span>Save to Property Vault</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                    <span>Save to Property Vault</span>
                 </button>
-             ) : (
+                ) : (
                 <span className="text-xs text-slate-400 italic">Select a property in the form above to save this report.</span>
-             )}
-          </div>
-          <p className="text-[10px] text-slate-300 mt-4 text-center italic uppercase tracking-wider">Confidential Report • For Professional Use Only</p>
-        </div>
-      )}
+                )}
+            </div>
+            <p className="text-[10px] text-slate-300 mt-4 text-center italic uppercase tracking-wider">Confidential Report • For Professional Use Only</p>
+            </div>
+        )}
 
-      {result && !invoiceData && !checkResult && (
-        <div className="bg-white p-8 rounded-[2rem] border border-indigo-200 shadow-xl shadow-indigo-500/10 animate-in zoom-in-95 duration-300">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-bold text-slate-900">AI Generated Content</h4>
-            <button 
-              onClick={() => { navigator.clipboard.writeText(result); alert('Copied to clipboard!'); }}
-              className="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 flex items-center"
-            >
-              Copy Text
-            </button>
-          </div>
-          <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed font-medium">
-            {result}
-          </div>
-        </div>
-      )}
+        {/* Result: General Text */}
+        {result && !invoiceData && !checkResult && (
+            <div className="bg-white p-8 rounded-[2rem] border border-indigo-200 shadow-xl shadow-indigo-500/10 animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-bold text-slate-900">AI Generated Content</h4>
+                <button 
+                onClick={() => { navigator.clipboard.writeText(result); alert('Copied to clipboard!'); }}
+                className="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 flex items-center"
+                >
+                Copy Text
+                </button>
+            </div>
+            <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed font-medium">
+                {result}
+            </div>
+            </div>
+        )}
+      </div>
     </div>
   );
 };

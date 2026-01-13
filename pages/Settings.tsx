@@ -15,7 +15,7 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   // Agency Config
   const [agencyDetails, setAgencyDetails] = useState({
     name: 'My Agency',
-    subscriptionPlan: 'Growth',
+    subscriptionPlan: userProfile.plan || 'Trial',
     billingEmail: userProfile.email,
     paymentMethod: 'Visa ending 4242'
   });
@@ -35,7 +35,11 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
             // Ignore error
         }
     }
-  }, []);
+    // Ensure local state matches authenticated user profile plan
+    if (userProfile.plan) {
+        setAgencyDetails(prev => ({ ...prev, subscriptionPlan: userProfile.plan! }));
+    }
+  }, [userProfile.plan]);
 
   const handleSaveApiKey = () => {
       const currentSettings = JSON.parse(localStorage.getItem('proptrust_agency_settings') || '{}');
@@ -45,8 +49,16 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   };
 
   const handleSubscribe = (plan: string) => {
+    // 1. Update Local Settings
     setAgencyDetails(prev => ({ ...prev, subscriptionPlan: plan }));
-    alert(`Switched to ${plan} plan successfully.`);
+    
+    // 2. Update User Profile to Unlock Features Immediately
+    onUpdateProfile({
+        ...userProfile,
+        plan: plan as any
+    });
+
+    alert(`Switched to ${plan} plan successfully. Restricted modules are now unlocked.`);
   };
 
   const handleEditUser = (user: UserAccount) => {
@@ -66,7 +78,13 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   // Helper to safely open external links in PWA/Webview/Browser
   const openExternalLink = (url: string) => {
     // Force new window to avoid X-Frame-Options: DENY from Google
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // 'noopener,noreferrer' is critical for security and to force a new process
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    
+    // Fallback if popup blocker catches it
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        alert(`Please visit the following URL in your browser:\n\n${url}`);
+    }
   };
 
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400";
@@ -176,7 +194,9 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                  <h3 className="text-xl font-bold text-slate-900">Subscription Plan</h3>
                  <p className="text-slate-500 text-sm mt-1">Manage your agency's billing tier.</p>
                </div>
-               <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">Active: {agencyDetails.subscriptionPlan}</span>
+               <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${agencyDetails.subscriptionPlan === 'Trial' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                   Active: {agencyDetails.subscriptionPlan}
+               </span>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -192,7 +212,12 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                     {agencyDetails.subscriptionPlan === 'Starter' ? (
                         <button disabled className="w-full mt-6 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest opacity-50 cursor-default">Current Plan</button>
                     ) : (
-                        <button onClick={() => handleSubscribe('Starter')} className="w-full mt-6 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-50">Downgrade</button>
+                        <button 
+                            onClick={() => handleSubscribe('Starter')} 
+                            className="w-full mt-6 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-50"
+                        >
+                            {agencyDetails.subscriptionPlan === 'Trial' ? 'Activate Plan' : 'Downgrade'}
+                        </button>
                     )}
                 </div>
 
@@ -211,9 +236,9 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                     ) : (
                         <button 
                             onClick={() => handleSubscribe('Growth')} 
-                            className={`w-full mt-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest ${agencyDetails.subscriptionPlan === 'Starter' ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg' : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}
+                            className={`w-full mt-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest ${agencyDetails.subscriptionPlan === 'Starter' || agencyDetails.subscriptionPlan === 'Trial' ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg' : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}
                         >
-                            {agencyDetails.subscriptionPlan === 'Starter' ? 'Upgrade' : 'Switch'}
+                            {agencyDetails.subscriptionPlan === 'Starter' || agencyDetails.subscriptionPlan === 'Trial' ? 'Upgrade' : 'Switch'}
                         </button>
                     )}
                 </div>

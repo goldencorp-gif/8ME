@@ -25,6 +25,9 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
   const [agencyUrl, setAgencyUrl] = useState('');
   const [customBg, setCustomBg] = useState('');
 
+  // Support Contact Info
+  const ADMIN_EMAIL = '8milesestate@gmail.com';
+
   // Auto-switch to Setup Mode if no users exist
   useEffect(() => {
       if (localUserCount === 0) {
@@ -46,6 +49,40 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
     }
   }, []);
 
+  const handleForgotPassword = () => {
+    // 1. Construct the email body
+    const subject = encodeURIComponent("Password Reset Request - 8ME");
+    const body = encodeURIComponent(
+      `To 8 Miles Estate Support,\n\n` +
+      `I am requesting a password reset for my account.\n\n` +
+      `Email: ${email || '[Insert Email Here]'}\n` +
+      `Date: ${new Date().toLocaleDateString()}\n\n` +
+      `Please provide instructions on how to recover my access.`
+    );
+    
+    // 2. Trigger Mail Client
+    window.location.href = `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+  };
+
+  const notifyAdminOfSignup = (userName: string, userEmail: string) => {
+    // 1. Construct the notification email
+    const subject = encodeURIComponent(`New Agency Registration: ${userName}`);
+    const body = encodeURIComponent(
+      `System Notification: New User Sign-Up\n\n` +
+      `User Name: ${userName}\n` +
+      `Email: ${userEmail}\n` +
+      `Time: ${new Date().toLocaleString()}\n\n` +
+      `Please verify this account in the Master Console.`
+    );
+
+    // 2. Attempt to open mail client (User interaction context is preserved in handleSubmit usually, 
+    // but async might block window.open. using location.href is safer for mailto)
+    // We wrap in a slight timeout to ensure the UI updates first
+    setTimeout(() => {
+       window.location.href = `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+    }, 500);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -59,7 +96,11 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
               return;
           }
           await registerLocalUser(name, email, password);
-          // Register automatically logs in
+          
+          // NOTIFICATION: Notify Admin of new signup
+          notifyAdminOfSignup(name, email);
+          
+          // Register automatically logs in, so no need to redirect manually
       } else {
           const result = await login(email, password);
           if (!result.success) {
@@ -199,10 +240,7 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
               {mode === 'login' && (
                   <button 
                     type="button" 
-                    onClick={() => {
-                        // "Auto-fill the admin email address" -> open mail client with to=help@8me.com
-                        window.location.href = "mailto:help@8me.com?subject=Password Reset Request";
-                    }} 
+                    onClick={handleForgotPassword} 
                     className="font-bold text-indigo-600 hover:text-indigo-800"
                   >
                     Forgot password?

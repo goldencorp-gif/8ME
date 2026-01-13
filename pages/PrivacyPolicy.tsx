@@ -33,7 +33,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
              <h3 className="font-bold text-indigo-900 mb-1">Developer Information</h3>
              <p className="text-sm text-indigo-800">
                <strong>Developed by:</strong> 8 Miles Estate Pty Ltd<br/>
-               <strong>Contact:</strong> support@8me.com
+               <strong>Contact:</strong> 8milesestate@gmail.com
              </p>
           </div>
 
@@ -85,7 +85,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
             <h3>7. Contact Us</h3>
             <p>
               If you have any questions about this Privacy Policy, please contact us at: <br />
-              <strong>Email:</strong> privacy@8me.com
+              <strong>Email:</strong> 8milesestate@gmail.com
             </p>
           </div>
         </div>

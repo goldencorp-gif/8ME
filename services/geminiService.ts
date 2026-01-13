@@ -1,16 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// --- FALLBACK DATA (Offline Mode) ---
-const FALLBACK_SUGGESTIONS: Record<string, string> = {
-  'Inspection': "1. Verify entry keys are ready and working.\n2. Review the previous condition report for comparison.\n3. Send an SMS reminder to the tenant 24 hours prior.",
-  'Maintenance': "1. Check if the item is still under warranty.\n2. Assign to an approved, insured tradesperson.\n3. Set a strict budget limit for the quote.",
-  'Lease': "1. Compare current rent with latest market data.\n2. Review tenant's payment ledger for consistency.\n3. Draft the renewal lease agreement early.",
-  'Legal': "1. Review relevant RTA legislation updates.\n2. Prepare all necessary tribunal documents.\n3. Brief the landlord on potential outcomes.",
-  'Viewing': "1. Ensure all blinds are open and lights are on.\n2. Have printed property brochures ready.\n3. Follow up with attendees within 1 hour.",
-  'default': "1. Prioritize this task based on urgency.\n2. Document all communications in the log.\n3. Schedule a follow-up reminder."
-};
-
 // Helper to get API Key (User Override > Env Var)
 const getApiKey = (): string => {
   try {
@@ -63,111 +53,127 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
 };
 
 // Helper to clean JSON string from Markdown
-const cleanJsonString = (text: string) => {
-  if (!text) return '[]';
+const cleanJsonString = (text: string | undefined | null) => {
+  if (!text) return '{}';
   let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  const firstBracket = clean.indexOf('[');
-  const lastBracket = clean.lastIndexOf(']');
-  if (firstBracket !== -1 && lastBracket !== -1) {
-    clean = clean.substring(firstBracket, lastBracket + 1);
+  
+  // Find start of JSON (Object or Array)
+  const firstCurly = clean.indexOf('{');
+  const firstSquare = clean.indexOf('[');
+  
+  let startIndex = -1;
+  let endIndex = -1;
+
+  // Determine if Object or Array starts first to handle mixed content
+  if (firstCurly !== -1 && (firstSquare === -1 || firstCurly < firstSquare)) {
+      startIndex = firstCurly;
+      endIndex = clean.lastIndexOf('}');
+  } else if (firstSquare !== -1) {
+      startIndex = firstSquare;
+      endIndex = clean.lastIndexOf(']');
   }
+
+  if (startIndex !== -1 && endIndex !== -1) {
+      clean = clean.substring(startIndex, endIndex + 1);
+  }
+  
   return clean;
 };
 
+// --- CORE GENERATION FUNCTIONS ---
+
 export const generatePropertyDescription = async (address: string, features: string[]) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Generate a compelling property description for ${address}. Features: ${features.join(', ')}.`,
-    });
-    return response.text;
-  } catch (error) {
-    return `Beautiful property located at ${address}. Featuring ${features.join(', ')}. Contact us for a viewing today.`;
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+  
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Generate a compelling property description for ${address}. Features: ${features.join(', ')}.`,
+  });
+  return response.text;
 };
 
 export const generateLeaseAppraisal = async (
   address: string, type: string, beds: string, baths: string, cars: string, features: string[]
 ) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Generate Lease Appraisal for ${address} (${type}, ${beds}bed, ${baths}bath). Features: ${features.join(', ')}. Include rent range, target tenant, marketing strategy.`,
-    });
-    return response.text;
-  } catch (error) {
-    return "Appraisal generation unavailable (Offline Mode). Please estimate based on market comparables.";
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Generate Lease Appraisal for ${address} (${type}, ${beds}bed, ${baths}bath). Features: ${features.join(', ')}. Include rent range, target tenant, marketing strategy.`,
+  });
+  return response.text;
 };
 
 export const generateSalesAppraisal = async (
   address: string, type: string, beds: string, baths: string, cars: string, features: string[]
 ) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Generate Sales Appraisal for ${address}.`,
-    });
-    return response.text;
-  } catch (error) {
-    return "Sales data unavailable (Offline Mode).";
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Generate Sales Appraisal for ${address}.`,
+  });
+  return response.text;
 };
 
 export const generateProspectingMessage = async (area: string, type: string, hook: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Write a real estate prospecting ${type} for ${area}. Hook: ${hook}.`,
-    });
-    return response.text;
-  } catch (error) {
-    return `Hello neighbors of ${area}, active buyers are looking in your area. Contact us to discuss your property value.`;
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Write a real estate prospecting ${type} for ${area}. Hook: ${hook}.`,
+  });
+  return response.text;
 };
 
 export const analyzeArrearsMessage = async (
   tenantName: string, amount: number, days: number, address: string, item: string, deadline: string, paymentMethod: string
 ) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Draft arrears notice for ${tenantName} at ${address}. $${amount} overdue by ${days} days.`,
-    });
-    return response.text;
-  } catch (error) {
-    return `Dear ${tenantName}, please note that rent of $${amount} for ${address} is currently ${days} days overdue. Please remit payment immediately.`;
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Draft arrears notice for ${tenantName} at ${address}. $${amount} overdue by ${days} days.`,
+  });
+  return response.text;
 };
 
 export const generateQuoteRequestEmail = async (tradesmanName: string, address: string, issue: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Write quote request email to ${tradesmanName} for ${issue} at ${address}.`,
-    });
-    return response.text;
-  } catch (error) {
-    return `Hi ${tradesmanName}, please provide a quote for attending to: ${issue} at ${address}. Thanks.`;
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Write quote request email to ${tradesmanName} for ${issue} at ${address}.`,
+  });
+  return response.text;
 };
 
 export const parseTransactionFromText = async (rawText: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const key = getApiKey();
+  if (!key) return null;
+
+  const ai = new GoogleGenAI({ apiKey: key });
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `Extract transaction from: "${rawText}". Return JSON: {description, amount, type, account, reference}`,
       config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(cleanJsonString(response.text || '{}'));
+    return JSON.parse(cleanJsonString(response.text));
   } catch (error) {
+    console.error("Parse Tx Error:", error);
     return null;
   }
 };
@@ -175,112 +181,151 @@ export const parseTransactionFromText = async (rawText: string) => {
 export const parseInvoiceRequest = async (
   text: string, address: string, type: 'Owner' | 'Tenant', date: string, templateBase64?: string
 ) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const parts: any[] = [{ text: `Generate invoice JSON for ${address}. Details: ${text}` }];
-    if (templateBase64) parts.push({ inlineData: { mimeType: "image/png", data: templateBase64 } });
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: { parts },
-      config: { responseMimeType: "application/json" }
-    });
-    return JSON.parse(cleanJsonString(response.text || '{}'));
-  } catch (error) {
-    return null;
+  const ai = new GoogleGenAI({ apiKey: key });
+  
+  let promptText = `Generate a structured invoice JSON for property: ${address}. \nRecipient Type: ${type}. \nInvoice Date: ${date}. \nWork/Details Description: ${text}`;
+  
+  if (templateBase64) {
+      promptText += `\n\nIMPORTANT: A custom invoice template image is provided.
+      1. Analyze the visual layout of the template image.
+      2. You MUST return a 'customHtml' string field.
+      3. This 'customHtml' must be a full HTML document (with <html>, <body>, <style>).
+      4. CRITICAL: Use the specific placeholder '{{BG_IMAGE}}' as the background-image URL for the main container. Do NOT use a placeholder image URL.
+      5. Example CSS: background-image: url('{{BG_IMAGE}}'); background-size: 100% auto; background-repeat: no-repeat;
+      6. Use absolute positioning (CSS) to overlay the invoice details (Number, Date, Items, Total) onto the correct spots on the background image to match the template layout.`;
   }
+
+  const parts: any[] = [{ text: promptText }];
+  if (templateBase64) parts.push({ inlineData: { mimeType: "image/png", data: templateBase64 } });
+
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: { parts },
+    config: { 
+        responseMimeType: "application/json",
+        responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+                invoiceNumber: { type: Type.STRING },
+                date: { type: Type.STRING },
+                dueDate: { type: Type.STRING },
+                totalAmount: { type: Type.NUMBER },
+                summary: { type: Type.STRING },
+                items: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            description: { type: Type.STRING },
+                            amount: { type: Type.NUMBER }
+                        }
+                    }
+                },
+                customHtml: { type: Type.STRING, description: "Full HTML string with {{BG_IMAGE}} placeholder if template provided." }
+            }
+        }
+    }
+  });
+  return JSON.parse(cleanJsonString(response.text));
 };
 
 export const parseBankStatement = async (imageBase64: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
-          { text: `Extract bank transactions to JSON array.` }
-        ]
-      },
-      config: { responseMimeType: "application/json" }
-    });
-    return JSON.parse(cleanJsonString(response.text || '[]'));
-  } catch (error) {
-    return [];
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: {
+      parts: [
+        { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+        { text: `Extract bank transactions to JSON array.` }
+      ]
+    },
+    config: { responseMimeType: "application/json" }
+  });
+  return JSON.parse(cleanJsonString(response.text));
 };
 
 export const prioritizeMaintenance = async (issue: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const key = getApiKey();
+  if (!key) return 'Medium'; // Silent fallback for simple logic
+
+  const ai = new GoogleGenAI({ apiKey: key });
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `Prioritize maintenance: "${issue}". Return JSON: {priority: Low|Medium|High|Urgent}`,
       config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(cleanJsonString(response.text || '{}')).priority || 'Medium';
+    return JSON.parse(cleanJsonString(response.text)).priority || 'Medium';
   } catch (error) {
     return 'Medium';
   }
 };
 
 export const generateBackgroundCheck = async (name: string, id: string, address: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Generate hypothetical background check JSON for ${name}.`,
-      config: { responseMimeType: "application/json" }
-    });
-    return JSON.parse(cleanJsonString(response.text || '{}'));
-  } catch (error) {
-    return null;
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Generate hypothetical background check JSON for ${name}.`,
+    config: { responseMimeType: "application/json" }
+  });
+  return JSON.parse(cleanJsonString(response.text));
 };
 
 export const generatePrivacyConsent = async (agencyName: string, applicantName: string, propertyAddress: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Draft Privacy Consent Form for ${applicantName} applying at ${propertyAddress}.`,
-    });
-    return response.text;
-  } catch (error) {
-    return "Error generating form.";
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Draft Privacy Consent Form for ${applicantName} applying at ${propertyAddress}.`,
+  });
+  return response.text;
 };
 
 export const generateEntryNotice = async (tenantName: string, address: string, date: string, timeWindow: string = '9:00 AM - 5:00 PM') => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Draft Entry Notice for ${tenantName} at ${address} on ${date}.`,
-    });
-    return response.text;
-  } catch (error) {
-    return `Notice of Entry\n\nTo ${tenantName},\n\nWe hereby give notice of entry to ${address} on ${date} between ${timeWindow} for the purpose of a routine inspection.\n\nRegards,\nProperty Management`;
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Draft Entry Notice for ${tenantName} at ${address} on ${date}.`,
+  });
+  return response.text;
 };
 
 export const processScheduleTextCommand = async (text: string, contextDate: string, currentSchedule: string = '') => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const key = getApiKey();
+  if (!key) return { intent: "UNKNOWN", speechResponse: "API Key Missing. Please configure Settings." };
+
+  const ai = new GoogleGenAI({ apiKey: key });
   try {
     const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `Property Schedule Assistant. Date: ${contextDate}. Schedule: ${currentSchedule}. User Input: "${text}". Return JSON action.`,
       config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(cleanJsonString(response.text || '{}'));
+    return JSON.parse(cleanJsonString(response.text));
   } catch (error: any) {
-    // If quota exceeded, just return a polite failure
-    return { intent: "UNKNOWN", speechResponse: "I'm having trouble connecting to the AI brain right now (Daily Limit or Key Issue). Please try manual controls." };
+    return { intent: "UNKNOWN", speechResponse: "AI connection failed. Please check your API key or quota." };
   }
 };
 
 export const processScheduleVoiceCommand = async (audioBase64: string, contextDate: string, currentSchedule: string = '') => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const key = getApiKey();
+  if (!key) return { intent: "UNKNOWN", speechResponse: "API Key Missing." };
+
+  const ai = new GoogleGenAI({ apiKey: key });
   try {
     const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
@@ -292,14 +337,17 @@ export const processScheduleVoiceCommand = async (audioBase64: string, contextDa
       },
       config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(cleanJsonString(response.text || '{}'));
+    return JSON.parse(cleanJsonString(response.text));
   } catch (error: any) {
-    return { intent: "UNKNOWN", speechResponse: "Voice processing unavailable (Quota Limit)." };
+    return { intent: "UNKNOWN", speechResponse: "Voice processing unavailable (Error or Quota)." };
   }
 };
 
 export const optimizeScheduleOrder = async (events: any[]) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const key = getApiKey();
+  if (!key) return [];
+
+  const ai = new GoogleGenAI({ apiKey: key });
   try {
     const simpleEvents = events.map(e => ({ id: e.id, title: e.title, time: e.time, address: e.propertyAddress }));
     const response = await generateContentWithRetry(ai, {
@@ -307,44 +355,42 @@ export const optimizeScheduleOrder = async (events: any[]) => {
       contents: `Re-order these events for efficiency: ${JSON.stringify(simpleEvents)}. Return JSON array of IDs.`,
       config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(cleanJsonString(response.text || '[]'));
+    return JSON.parse(cleanJsonString(response.text));
   } catch (error) {
-    // Silent fail
     return []; 
   }
 };
 
 export const generateScheduleTips = async (events: any[]) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await generateContentWithRetry(ai, {
-      model: 'gemini-3-flash-preview',
-      contents: `Review this schedule: ${JSON.stringify(events.map(e => e.title + ' at ' + e.propertyAddress))}. Give one short 15-word Pro Tip for efficiency.`
-    });
-    return response.text;
-  } catch (error) {
-    // Local Fallback Tip
-    return "Group nearby inspections to save travel time. Don't forget keys!";
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Review this schedule: ${JSON.stringify(events.map(e => e.title + ' at ' + e.propertyAddress))}. Give one short 15-word Pro Tip for efficiency.`
+  });
+  return response.text;
 };
 
 export const summarizePropertyHistory = async (address: string, events: any[]) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response = await generateContentWithRetry(ai, {
-        model: 'gemini-3-flash-preview',
-        contents: `Summarize history for ${address} based on these events: ${JSON.stringify(events)}.`
-    });
-    return response.text;
-  } catch (error) {
-    return "History unavailable offline.";
-  }
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  const response = await generateContentWithRetry(ai, {
+      model: 'gemini-3-flash-preview',
+      contents: `Summarize history for ${address} based on these events: ${JSON.stringify(events)}.`
+  });
+  return response.text;
 };
 
 export const generateTaskSuggestions = async (taskTitle: string, taskType: string, taskDesc: string, taskAddress: string) => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const key = getApiKey();
+  if (!key) return "API Key required for suggestions.";
+
+  const ai = new GoogleGenAI({ apiKey: key });
   try {
-    // Retry logic wrapper
     const response = await generateContentWithRetry(ai, {
       model: 'gemini-3-flash-preview',
       contents: `Context: Property Manager Task Assistant.
@@ -359,25 +405,22 @@ export const generateTaskSuggestions = async (taskTitle: string, taskType: strin
     });
     return response.text;
   } catch (e: any) {
-    // FALLBACK: Return hardcoded best practices if Quota Exceeded
-    console.warn("Gemini Quota Hit - Using Fallback Suggestions");
-    return FALLBACK_SUGGESTIONS[taskType] || FALLBACK_SUGGESTIONS['default'];
+    return "Suggestion service unavailable.";
   }
 };
 
 export const generateLogbookEntriesFromSchedule = async (events: any[], officeAddress: string = 'Agency Office') => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const tripPoints = events.filter(e => e.propertyAddress && e.propertyAddress !== 'General / Office');
-    if (tripPoints.length === 0) return [];
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
 
-    const response = await generateContentWithRetry(ai, {
-      model: 'gemini-3-flash-preview',
-      contents: `Calculate logbook trips for this schedule starting/ending at ${officeAddress}: ${JSON.stringify(tripPoints)}. Return JSON array {vehicle, date, purpose, category, distance}.`,
-      config: { responseMimeType: "application/json" }
-    });
-    return JSON.parse(cleanJsonString(response.text || '[]'));
-  } catch (error: any) {
-    throw error;
-  }
+  const ai = new GoogleGenAI({ apiKey: key });
+  const tripPoints = events.filter(e => e.propertyAddress && e.propertyAddress !== 'General / Office');
+  if (tripPoints.length === 0) return [];
+
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: `Calculate logbook trips for this schedule starting/ending at ${officeAddress}: ${JSON.stringify(tripPoints)}. Return JSON array {vehicle, date, purpose, category, distance}.`,
+    config: { responseMimeType: "application/json" }
+  });
+  return JSON.parse(cleanJsonString(response.text));
 };

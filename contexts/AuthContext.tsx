@@ -106,7 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setLocalUserCount(prev => prev + 1);
       
-      // Auto Login
+      // Auto Login - Default to 'Trial' so restrictions apply to new users immediately
+      // Use 'Growth' or 'Enterprise' to unlock full features.
       finishLogin({ name, email, title: 'Agency Admin', phone: '', plan: 'Trial' }, 'Admin');
   };
 
@@ -160,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // --- LEVEL 2: CENTRAL REGISTRY CHECK (Payment/Status Validation) ---
     // Check if the agency exists in the Master's Central Registry first.
     const centralAgency = await db.centralRegistry.getAgencyByEmail(email);
-    let plan: 'Trial' | 'Starter' | 'Growth' | 'Enterprise' = 'Trial';
+    let plan: 'Trial' | 'Starter' | 'Growth' | 'Enterprise' = 'Trial'; // Default to Trial if not found/local
 
     if (centralAgency) {
         // Enforce Status
@@ -209,12 +210,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (localUser) {
                 if (localUser.status !== 'Active') return { success: false, error: 'Account Suspended' };
                 
+                // If the user has a stored profile plan, use it, otherwise fallback to Trial
+                // We re-read the plan from the stored profile to preserve existing users' access
+                const existingProfile = JSON.parse(localStorage.getItem('proptrust_user_profile') || '{}');
+                const userPlan = existingProfile.email === email && existingProfile.plan ? existingProfile.plan : 'Trial';
+
                 finishLogin({
                     name: localUser.name,
                     email: localUser.email,
                     title: 'Agency Admin',
                     phone: '',
-                    plan: plan // Defaults to Trial if not in central
+                    plan: userPlan 
                 }, localUser.role);
                 return { success: true };
             }
@@ -223,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // FALLBACK DEMO ACCOUNT
     if (email === 'alex.manager@8me.com') {
-         const demoProfile = { name: 'Alex Manager', email, title: 'Demo User', phone: '', plan: 'Trial' as const };
+         const demoProfile = { name: 'Alex Manager', email, title: 'Demo User', phone: '', plan: 'Growth' as const };
          finishLogin(demoProfile, 'Admin');
          return { success: true };
     }

@@ -166,7 +166,7 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
                      {/* Sidebar Mock */}
                      <div className="w-16 md:w-20 border-r border-slate-800 bg-slate-900/50 flex flex-col items-center py-6 space-y-6 shrink-0">
                         <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">8</div>
-                        <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></div>
+                        <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></div>
                         <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg></div>
                         <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-500 flex items-center justify-center"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
                      </div>
@@ -481,7 +481,7 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
                    <div>
                       <h4 className="font-bold text-indigo-900">Email Us</h4>
                       <p className="text-sm text-indigo-700/80 mb-2">Our team typically responds within 2 hours during business hours.</p>
-                      <a href="mailto:help@8me.com" className="text-sm font-bold text-indigo-600 underline">help@8me.com</a>
+                      <a href="mailto:8milesestate@gmail.com" className="text-sm font-bold text-indigo-600 underline">8milesestate@gmail.com</a>
                    </div>
                 </div>
                 
@@ -492,7 +492,7 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
                    <div>
                       <h4 className="font-bold text-emerald-900">Priority Phone Support</h4>
                       <p className="text-sm text-emerald-700/80 mb-2">Available Mon-Fri, 9am - 5pm AEST for Enterprise customers.</p>
-                      <span className="text-sm font-bold text-emerald-600">1300 000 000</span>
+                      <span className="text-sm font-bold text-emerald-600">+61 432866168</span>
                    </div>
                 </div>
              </div>

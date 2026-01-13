@@ -37,7 +37,7 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack }) => {
                 <li><strong>Developed By:</strong> 8 Miles Estate Pty Ltd</li>
                 <li><strong>Copyright:</strong> © {new Date().getFullYear()} 8 Miles Estate Pty Ltd. All rights reserved.</li>
                 <li><strong>Trademarks:</strong> "8ME", "8 Miles Estate", and the 8ME Logo are trademarks of 8 Miles Estate Pty Ltd.</li>
-                <li><strong>Contact:</strong> support@8me.com</li>
+                <li><strong>Contact:</strong> 8milesestate@gmail.com</li>
               </ul>
             </div>
 
