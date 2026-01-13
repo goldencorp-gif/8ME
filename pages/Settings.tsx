@@ -15,7 +15,7 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   // Agency Config
   const [agencyDetails, setAgencyDetails] = useState({
     name: 'My Agency',
-    subscriptionPlan: userProfile.plan || 'Trial',
+    subscriptionPlan: (userProfile.plan || 'Trial') as 'Trial' | 'Starter' | 'Growth' | 'Enterprise',
     billingEmail: userProfile.email,
     paymentMethod: 'Visa ending 4242'
   });
@@ -48,14 +48,14 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
       alert("AI API Key saved successfully.");
   };
 
-  const handleSubscribe = (plan: string) => {
+  const handleSubscribe = (plan: 'Trial' | 'Starter' | 'Growth' | 'Enterprise') => {
     // 1. Update Local Settings
     setAgencyDetails(prev => ({ ...prev, subscriptionPlan: plan }));
     
     // 2. Update User Profile to Unlock Features Immediately
     onUpdateProfile({
         ...userProfile,
-        plan: plan as any
+        plan: plan
     });
 
     alert(`Switched to ${plan} plan successfully. Restricted modules are now unlocked.`);
