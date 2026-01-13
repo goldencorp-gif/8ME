@@ -95,6 +95,12 @@ export const db = {
        const agencies = await db.centralRegistry.listAgencies();
        const updated = agencies.map(a => a.contactEmail === email ? { ...a, passwordHash: newPasswordHash } : a);
        localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
+    },
+    // New: Allow Master to edit agency details (Name, Email, Plan)
+    updateAgencyDetails: async (id: string, updates: Partial<Agency>) => {
+       const agencies = await db.centralRegistry.listAgencies();
+       const updated = agencies.map(a => a.id === id ? { ...a, ...updates } : a);
+       localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
     }
   },
 

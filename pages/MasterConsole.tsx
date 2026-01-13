@@ -56,6 +56,16 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
     plan: 'Starter' as 'Starter' | 'Growth' | 'Enterprise'
   });
 
+  // Edit Agency State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
+  const [editForm, setEditForm] = useState({
+      name: '',
+      email: '',
+      plan: 'Starter' as 'Starter' | 'Growth' | 'Enterprise',
+      status: 'Active' as Agency['status']
+  });
+
   // Reset Credentials State
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetData, setResetData] = useState({ email: '', newPassword: '' });
@@ -129,11 +139,44 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
         const createdPass = newAgency.password;
         setNewAgency({ name: '', email: '', password: '', plan: 'Starter' });
         
-        alert(`Credentials Issued!\n\nAgency: ${created.name}\nUser: ${created.contactEmail}\nPass: ${createdPass}\n\nEmail these to the client manually.`);
+        alert(`Account Created!\n\nAgency: ${created.name}\nUser: ${created.contactEmail}\nPass: ${createdPass}\n\nEmail these credentials to the client.`);
     } catch (e) {
         alert("Failed to issue credentials. Check console.");
         console.error(e);
     }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingAgency) return;
+
+      const updates = {
+          name: editForm.name,
+          contactEmail: editForm.email,
+          subscriptionPlan: editForm.plan,
+          status: editForm.status,
+          // Recalculate limits/MRR based on plan
+          licenseLimit: editForm.plan === 'Starter' ? 1 : 5,
+          mrr: editForm.plan === 'Starter' ? 54.99 : editForm.plan === 'Growth' ? 199.99 : 1688.00
+      };
+
+      await db.centralRegistry.updateAgencyDetails(editingAgency.id, updates);
+      
+      setAgencies(prev => prev.map(a => a.id === editingAgency.id ? { ...a, ...updates } : a));
+      setIsEditModalOpen(false);
+      setEditingAgency(null);
+      alert(`Agency '${updates.name}' updated successfully.`);
+  };
+
+  const openEditModal = (agency: Agency) => {
+      setEditingAgency(agency);
+      setEditForm({
+          name: agency.name,
+          email: agency.contactEmail,
+          plan: agency.subscriptionPlan,
+          status: agency.status
+      });
+      setIsEditModalOpen(true);
   };
 
   const handleStatusChange = async (agency: Agency, newStatus: Agency['status']) => {
@@ -188,7 +231,7 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
           onClick={() => setIsCreateModalOpen(true)}
           className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-slate-800 shadow-xl"
         >
-          Issue Access Credentials
+          Create New Client Account
         </button>
       </div>
 
@@ -242,6 +285,15 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                         </span>
                      </td>
                      <td className="px-8 py-4 text-right flex justify-end gap-2">
+                        {/* Edit Button */}
+                        <button 
+                            onClick={() => openEditModal(agency)}
+                            className="p-2 text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Edit Account Details"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+
                         {/* Credential Recovery Button */}
                         <button 
                             onClick={() => openResetModal(agency.contactEmail)}
@@ -334,8 +386,8 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setIsCreateModalOpen(false)} />
            <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95">
-              <h3 className="text-xl font-black text-slate-900 mb-6">Issue Agency Credentials</h3>
-              <p className="text-xs text-slate-500 mb-6">Create the account in the central registry manually after payment is confirmed.</p>
+              <h3 className="text-xl font-black text-slate-900 mb-6">Create New Client Account</h3>
+              <p className="text-xs text-slate-500 mb-6">Manually generate an account and credentials for a new agency.</p>
               <form onSubmit={handleCreate} className="space-y-4">
                  <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Agency Name</label>
@@ -358,7 +410,7 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                     />
                  </div>
                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Temporary Password</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Access Credentials (Password)</label>
                     <div className="flex gap-2">
                         <input 
                         required 
@@ -418,7 +470,66 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                  </div>
 
                  <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl transition-all active:scale-95 mt-4">
-                    Issue Credentials
+                    Generate Account
+                 </button>
+              </form>
+           </div>
+        </div>
+      )}
+
+      {/* Edit Agency Modal */}
+      {isEditModalOpen && editingAgency && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setIsEditModalOpen(false)} />
+           <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95">
+              <h3 className="text-xl font-black text-slate-900 mb-6">Edit Account Details</h3>
+              <form onSubmit={handleUpdate} className="space-y-4">
+                 <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Agency Name</label>
+                    <input 
+                       type="text" 
+                       value={editForm.name}
+                       onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Admin Email</label>
+                    <input 
+                       type="email" 
+                       value={editForm.email}
+                       onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Status</label>
+                    <select 
+                       value={editForm.status}
+                       onChange={(e) => setEditForm({...editForm, status: e.target.value as any})}
+                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                       <option value="Active">Active</option>
+                       <option value="Paused">Paused</option>
+                       <option value="Suspended">Suspended</option>
+                       <option value="Trial">Trial</option>
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Subscription Plan</label>
+                    <select 
+                       value={editForm.plan}
+                       onChange={(e) => setEditForm({...editForm, plan: e.target.value as any})}
+                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                       <option value="Starter">Starter (1 User, 50 Props)</option>
+                       <option value="Growth">Growth (5 Users, 200 Props)</option>
+                       <option value="Enterprise">Enterprise (Unlimited)</option>
+                    </select>
+                 </div>
+
+                 <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl transition-all active:scale-95 mt-4">
+                    Save Changes
                  </button>
               </form>
            </div>

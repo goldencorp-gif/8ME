@@ -61,6 +61,11 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack }) => {
               <li>Remove, alter, or obscure any proprietary notice (including any copyright or trademark notice) of 8 Miles Estate or its affiliates.</li>
             </ul>
 
+            <h3>3.4 Free Trial & Cancellation</h3>
+            <p>
+              The initial subscription includes a 7-day Free Trial. If the agency wishes to cancel the Free Trial, they must notify the developer by email (8milesestate@gmail.com) within 7 days of registration, otherwise payment will be charged.
+            </p>
+
             <h3>4. Intellectual Property</h3>
             <p>
               The Application, including without limitation all copyrights, patents, trademarks, trade secrets, and other intellectual property rights are, and shall remain, the sole and exclusive property of 8 Miles Estate Pty Ltd.

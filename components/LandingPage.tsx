@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Property, Inquiry } from '../types';
 import { BrandLogo } from './BrandLogo';
+import { getStripeConfig } from '../services/stripeService';
 
 interface LandingPageProps {
   onLoginClick: () => void;
@@ -20,6 +21,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRequestDemo, 
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
 
+  // Registration & Payment State
+  const [showRegModal, setShowRegModal] = useState(false);
+  const [stripeLink, setStripeLink] = useState('');
+  const [regForm, setRegForm] = useState({
+      agencyName: '',
+      contactName: '',
+      email: '',
+      phone: ''
+  });
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+      getStripeConfig().then(config => {
+          // Default to starter link for the initial registration flow
+          setStripeLink(config.starterLink);
+      });
+  }, []);
+
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -34,6 +53,43 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRequestDemo, 
       // Fallback for direct URL (Standard Web)
       window.location.href = `/${view}`;
     }
+  };
+
+  const handleCreateAccountClick = () => {
+      if (agreedToTerms) {
+          setShowRegModal(true);
+      }
+  };
+
+  const handleRegistrationSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      // 1. Validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(regForm.email)) {
+          alert("Please enter a valid email address.");
+          return;
+      }
+
+      if (regForm.agencyName.trim().length < 3) {
+          alert("Please enter a valid Agency Name (minimum 3 characters).");
+          return;
+      }
+
+      // 2. Redirect to Payment
+      setIsRedirecting(true);
+      
+      // Note: We do NOT create the account here. 
+      // The user pays first -> Admin confirms -> Admin creates account manually in Master Console -> Admin sets to Free Trial.
+      
+      setTimeout(() => {
+          if (stripeLink && stripeLink !== '#') {
+              window.location.href = stripeLink;
+          } else {
+              alert("Payment system is currently initializing. Please try again in a moment or contact support.");
+              setIsRedirecting(false);
+          }
+      }, 1000);
   };
 
   const TERMS_TEXT = `
@@ -53,6 +109,7 @@ This Master Subscription Agreement ("Agreement") is entered into by and between 
 3.1 Fees. Customer shall pay all fees specified in Order Forms. Fees are based on Service subscriptions purchased and not actual usage.
 3.2 Invoicing. Fees will be invoiced in advance and otherwise in accordance with the relevant Order Form.
 3.3 Overdue Charges. If any invoiced amount is not received by Provider by the due date, then without limiting Provider’s rights or remedies, those charges may accrue late interest at the rate of 1.5% of the outstanding balance per month.
+3.4 Free Trial Cancellation. The initial subscription includes a 7-day Free Trial. If the agency wishes to cancel the Free Trial, they must notify the developer by email within 7 days, otherwise payment will be charged.
 
 4. PROPRIETARY RIGHTS AND LICENSES
 4.1 Reservation of Rights. Subject to the limited rights expressly granted hereunder, Provider reserves all of its right, title and interest in and to the Services, including all of its related intellectual property rights. No rights are granted to Customer hereunder other than as expressly set forth herein.
@@ -74,6 +131,8 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
 9. GENERAL PROVISIONS
 9.1 Entire Agreement. This Agreement constitutes the entire agreement between the parties and supersedes all prior and contemporaneous agreements, proposals or representations, written or oral, concerning its subject matter.
   `;
+
+  const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400";
 
   return (
     <div className="min-h-screen bg-slate-900 font-sans text-white scroll-smooth selection:bg-indigo-500 selection:text-white">
@@ -407,15 +466,8 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
               <p className="text-slate-400 mb-10 text-lg">Join 500+ agencies using 8ME to manage over $2B in property assets.</p>
               
               <div className="flex flex-col items-center max-w-sm mx-auto space-y-4">
-                 <input 
-                   type="email" 
-                   placeholder="Enter your work email..." 
-                   value={email}
-                   onChange={e => setEmail(e.target.value)}
-                   className="w-full px-6 py-4 rounded-xl bg-slate-800 border border-slate-700 text-white outline-none focus:border-indigo-500 font-bold placeholder:text-slate-600"
-                 />
                  
-                 <div className="flex items-center space-x-3 w-full px-2">
+                 <div className="flex items-center space-x-3 w-full px-2 mb-2">
                     <input 
                         type="checkbox" 
                         id="terms" 
@@ -429,13 +481,13 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
                  </div>
 
                  <button 
-                    onClick={onRequestDemo} 
+                    onClick={handleCreateAccountClick} 
                     disabled={!agreedToTerms}
                     className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest text-sm hover:bg-indigo-500 shadow-xl shadow-indigo-900/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                  >
                     Create Agency Account
                  </button>
-                 <p className="text-xs text-slate-600 font-bold">No credit card required for 14-day trial.</p>
+                 <p className="text-xs text-slate-600 font-bold">7-day free trial. Payment required to start.</p>
               </div>
            </div>
         </section>
@@ -567,6 +619,101 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
                  I Have Read & Agree
                </button>
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Modal */}
+      {showRegModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md animate-in fade-in" onClick={() => setShowRegModal(false)} />
+          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
+             <div className="mb-6 text-center">
+               <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+               </div>
+               <h3 className="text-2xl font-black tracking-tight">Agency Registration</h3>
+               <p className="text-slate-500 text-sm mt-1">Setup your 7-day free trial account.</p>
+             </div>
+
+             <form onSubmit={handleRegistrationSubmit} className="space-y-4">
+                <div>
+                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Agency Name</label>
+                   <input 
+                      required
+                      type="text" 
+                      value={regForm.agencyName}
+                      onChange={(e) => setRegForm({...regForm, agencyName: e.target.value})}
+                      className={inputClass}
+                      placeholder="e.g. Apex Real Estate"
+                   />
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Principal Contact</label>
+                   <input 
+                      required
+                      type="text" 
+                      value={regForm.contactName}
+                      onChange={(e) => setRegForm({...regForm, contactName: e.target.value})}
+                      className={inputClass}
+                      placeholder="Full Name"
+                   />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+                        <input 
+                            required
+                            type="email" 
+                            value={regForm.email}
+                            onChange={(e) => setRegForm({...regForm, email: e.target.value})}
+                            className={inputClass}
+                            placeholder="admin@agency.com"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Contact Number</label>
+                        <input 
+                            required
+                            type="tel" 
+                            value={regForm.phone}
+                            onChange={(e) => setRegForm({...regForm, phone: e.target.value})}
+                            className={inputClass}
+                            placeholder="+61 400..."
+                        />
+                    </div>
+                </div>
+
+                <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl mt-4">
+                    <p className="text-xs text-indigo-800 leading-relaxed font-medium">
+                        <strong>Next Step:</strong> You will be redirected to our secure payment gateway. Your account will be manually verified and activated by our team after payment confirmation.
+                    </p>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                    <button 
+                        type="button" 
+                        onClick={() => setShowRegModal(false)}
+                        className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        type="submit" 
+                        disabled={isRedirecting}
+                        className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    >
+                        {isRedirecting ? (
+                            <>
+                                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                Redirecting...
+                            </>
+                        ) : (
+                            'Proceed to Payment'
+                        )}
+                    </button>
+                </div>
+             </form>
           </div>
         </div>
       )}
