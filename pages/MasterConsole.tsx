@@ -216,6 +216,17 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
       }
   };
 
+  const handleExportRegistry = async () => {
+      const json = await db.centralRegistry.exportRegistry();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `8me_registry_export_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+  };
+
   const calculatedMrr = newAgency.plan === 'Starter' ? 54.99 : newAgency.plan === 'Growth' ? 199.99 : 1688.00;
   const listingCap = newAgency.plan === 'Starter' ? 50 : newAgency.plan === 'Growth' ? 200 : 'Unlimited';
   const totalRevenue = agencies.reduce((acc, a) => acc + a.mrr, 0);
@@ -227,12 +238,22 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
            <h2 className="text-3xl font-black text-slate-900">Master Console</h2>
            <p className="text-slate-500">Super Admin Controls</p>
         </div>
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-slate-800 shadow-xl"
-        >
-          Create New Client Account
-        </button>
+        <div className="flex gap-3">
+            <button 
+                onClick={handleExportRegistry}
+                className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-slate-50 shadow-sm flex items-center gap-2"
+                title="Download Database for Cross-Browser Sync"
+            >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Export DB
+            </button>
+            <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-slate-800 shadow-xl"
+            >
+            Create Account
+            </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-6">

@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BrandLogo } from './BrandLogo';
+import { db } from '../services/db';
 
 interface LoginProps {
   onBack?: () => void;
@@ -24,6 +25,10 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
   // Agency Config State
   const [agencyUrl, setAgencyUrl] = useState('');
   const [customBg, setCustomBg] = useState('');
+
+  // Import Modal State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   // Support Contact Info
   const ADMIN_EMAIL = '8milesestate@gmail.com';
@@ -112,6 +117,26 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+          const json = event.target?.result as string;
+          if (json) {
+              const result = await db.centralRegistry.importRegistry(json);
+              if (result.success) {
+                  alert(result.message);
+                  setShowImportModal(false);
+              } else {
+                  alert(`Import Failed: ${result.message}`);
+              }
+          }
+      };
+      reader.readAsText(file);
   };
 
   const inputClass = "w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-bold text-slate-900 transition-all placeholder:text-slate-300 text-sm";
@@ -264,29 +289,72 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
             </button>
           </form>
 
-          {/* Toggle for Demo Users who skipped setup but want to create new later, or Reset */}
-          {localUserCount > 0 && mode === 'login' && (
-              <div className="pt-6 text-center">
+          {/* Import / Reset Actions */}
+          <div className="pt-6 border-t border-slate-100 flex flex-col items-center gap-3">
+              {localUserCount > 0 && mode === 'login' && (
                   <button 
                     onClick={() => setMode('setup')} 
                     className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
                   >
                       Register New User on this Device
                   </button>
-              </div>
-          )}
-          {mode === 'setup' && localUserCount > 0 && (
-              <div className="pt-6 text-center">
+              )}
+              {mode === 'setup' && localUserCount > 0 && (
                   <button 
                     onClick={() => setMode('login')} 
                     className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
                   >
                       Back to Login
                   </button>
-              </div>
-          )}
+              )}
+              
+              {/* Import Link */}
+              <button 
+                onClick={() => setShowImportModal(true)}
+                className="text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-600 tracking-widest bg-indigo-50 px-3 py-1.5 rounded-full"
+              >
+                Import Account Data
+              </button>
+          </div>
         </div>
       </div>
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setShowImportModal(false)} />
+           <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 text-center">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 mx-auto mb-4">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+              </div>
+              <h3 className="text-xl font-black text-slate-900 mb-2">Import Account</h3>
+              <p className="text-xs text-slate-500 mb-6">Load the registry file exported from the Master Console to enable login on this device.</p>
+              
+              <input 
+                type="file" 
+                ref={importFileRef}
+                accept=".json"
+                className="hidden"
+                onChange={handleFileImport}
+              />
+              
+              <div className="space-y-3">
+                <button 
+                    onClick={() => importFileRef.current?.click()}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl"
+                >
+                    Select JSON File
+                </button>
+                <button 
+                    onClick={() => setShowImportModal(false)}
+                    className="w-full py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50"
+                >
+                    Cancel
+                </button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

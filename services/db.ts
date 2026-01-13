@@ -101,6 +101,34 @@ export const db = {
        const agencies = await db.centralRegistry.listAgencies();
        const updated = agencies.map(a => a.id === id ? { ...a, ...updates } : a);
        localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
+    },
+    // EXPORT: For manual sync
+    exportRegistry: async (): Promise<string> => {
+        const data = localStorage.getItem('proptrust_central_agencies');
+        return data || '[]';
+    },
+    // IMPORT: For manual sync
+    importRegistry: async (jsonString: string): Promise<{success: boolean, message: string}> => {
+        try {
+            const parsed = JSON.parse(jsonString);
+            if (!Array.isArray(parsed)) throw new Error("Invalid format");
+            
+            // Merge logic: Overwrite existing agencies by ID, add new ones
+            const current = await db.centralRegistry.listAgencies();
+            const currentMap = new Map(current.map(a => [a.id, a]));
+            
+            parsed.forEach((agency: any) => {
+                if (agency.id && agency.contactEmail) {
+                    currentMap.set(agency.id, agency);
+                }
+            });
+            
+            const merged = Array.from(currentMap.values());
+            localStorage.setItem('proptrust_central_agencies', JSON.stringify(merged));
+            return { success: true, message: `Successfully imported ${parsed.length} agency records.` };
+        } catch (e: any) {
+            return { success: false, message: e.message || "Import failed" };
+        }
     }
   },
 
