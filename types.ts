@@ -128,10 +128,12 @@ export interface CalendarEvent {
   title: string;
   date: string; 
   time?: string;
-  type: 'Inspection' | 'Maintenance' | 'Lease' | 'Legal' | 'Viewing' | 'Other';
+  type: 'Inspection' | 'Maintenance' | 'Lease' | 'Legal' | 'Viewing' | 'Call' | 'Email' | 'Other';
   propertyAddress?: string;
   description?: string;
-  checkedOut?: boolean; // New: Verifies attendance for Logbook
+  checkedOut?: boolean; // Verifies attendance for Logbook
+  contact?: string; // For Calls/Emails
+  reminderSet?: boolean; // For notifications
 }
 
 export interface LogbookEntry {

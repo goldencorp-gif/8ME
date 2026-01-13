@@ -18,7 +18,7 @@ interface ScheduleProps {
 
 // 1. Property-Based Background Color (Deterministic Hash)
 const getPropertyBackgroundColor = (address?: string) => {
-  if (!address || address === 'General Appointment') return 'bg-white';
+  if (!address || address === 'General / Office' || address === 'General Appointment') return 'bg-white';
   
   const colors = [
     'bg-red-50', 'bg-orange-50', 'bg-amber-50', 'bg-yellow-50', 'bg-lime-50',
@@ -42,6 +42,8 @@ const getEventTypeStyles = (type: CalendarEvent['type']) => {
     case 'Lease': return 'text-emerald-800 border-emerald-500';
     case 'Maintenance': return 'text-amber-800 border-amber-500';
     case 'Viewing': return 'text-sky-800 border-sky-500';
+    case 'Call': return 'text-cyan-800 border-cyan-500';
+    case 'Email': return 'text-violet-800 border-violet-500';
     default: return 'text-slate-800 border-slate-400';
   }
 };
@@ -54,6 +56,8 @@ const getEventTypeBadgeColor = (type: CalendarEvent['type']) => {
     case 'Lease': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
     case 'Maintenance': return 'bg-amber-100 text-amber-700 border-amber-200';
     case 'Viewing': return 'bg-sky-100 text-sky-700 border-sky-200';
+    case 'Call': return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+    case 'Email': return 'bg-violet-100 text-violet-700 border-violet-200';
     default: return 'bg-slate-100 text-slate-700 border-slate-200';
   }
 };
@@ -67,8 +71,12 @@ interface EventCardProps {
 }
 
 // Helper component for rendering a single event card
-const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, onDelete, onCheckOut }) => (
-  <div className={`group relative p-5 rounded-2xl border transition-all duration-300 ${ev.checkedOut ? 'bg-emerald-50 border-emerald-200 opacity-80' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-lg'}`}>
+const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, onDelete, onCheckOut }) => {
+  const isCall = ev.type === 'Call';
+  const isEmail = ev.type === 'Email';
+
+  return (
+    <div className={`group relative p-5 rounded-2xl border transition-all duration-300 ${ev.checkedOut ? 'bg-emerald-50 border-emerald-200 opacity-80' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-lg'}`}>
       <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getEventTypeBadgeColor(ev.type)}`}>
@@ -81,7 +89,7 @@ const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, o
                     checked={!!ev.checkedOut}
                     onChange={(e) => { e.stopPropagation(); onCheckOut(ev); }}
                     className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                    title="Check out to verify attendance"
+                    title={isCall || isEmail ? "Mark as Done" : "Check out to verify attendance"}
                 />
              </div>
           </div>
@@ -95,6 +103,17 @@ const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, o
                   Email Notice
               </button>
           )}
+          {isCall && ev.contact && (
+             <a href={`tel:${ev.contact}`} onClick={(e) => e.stopPropagation()} className="text-cyan-500 hover:text-cyan-700 bg-cyan-50 p-1 rounded-md">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+             </a>
+          )}
+          {isEmail && ev.contact && (
+             <a href={`mailto:${ev.contact}`} onClick={(e) => e.stopPropagation()} className="text-violet-500 hover:text-violet-700 bg-violet-50 p-1 rounded-md">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
+             </a>
+          )}
+
           <button 
               onClick={(e) => { e.stopPropagation(); onAiSuggest(ev); }} 
               className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
@@ -119,15 +138,32 @@ const EventCard: React.FC<EventCardProps> = ({ ev, onDraftNotice, onAiSuggest, o
           </div>
       </div>
       <h4 className={`font-bold ${ev.checkedOut ? 'text-emerald-900 line-through' : 'text-slate-900'}`}>{ev.title}</h4>
-      <p className="text-xs text-slate-500 mt-1">{ev.propertyAddress}</p>
-      {ev.checkedOut && <span className="inline-block mt-2 text-[9px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-2 py-0.5 rounded">Verified Visit</span>}
+      
+      {/* Contact Info Row */}
+      {ev.contact && (
+        <p className="text-xs text-indigo-600 font-medium mt-1 flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            {ev.contact}
+        </p>
+      )}
+
+      {ev.propertyAddress && ev.propertyAddress !== 'General / Office' && (
+        <p className="text-xs text-slate-500 mt-1">{ev.propertyAddress}</p>
+      )}
+      
+      <div className="flex gap-2 items-center">
+        {ev.reminderSet && <span className="inline-block mt-2 text-[9px] font-black uppercase text-amber-600 tracking-widest bg-amber-100 px-2 py-0.5 rounded">Reminder Set</span>}
+        {ev.checkedOut && <span className="inline-block mt-2 text-[9px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-2 py-0.5 rounded">Complete</span>}
+      </div>
+
       {ev.description && (
           <div className="mt-3 pt-3 border-t border-slate-200/50">
           <p className="text-xs text-slate-600 leading-relaxed">{ev.description}</p>
           </div>
       )}
-  </div>
-);
+    </div>
+  );
+};
 
 const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks = [], manualEvents, onAddEvent, onUpdateEvent, onRecordHistory, onDeleteEvent }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -138,7 +174,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   // View Management State
   const [viewMode, setViewMode] = useState<'time' | 'property'>('time');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'All' | 'Inspection' | 'Maintenance' | 'Viewing'>('All');
+  const [filterType, setFilterType] = useState<'All' | 'Inspection' | 'Maintenance' | 'Viewing' | 'Communication'>('All');
   
   // Custom Sort Order (Event IDs)
   const [customOrder, setCustomOrder] = useState<string[]>([]);
@@ -161,12 +197,16 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
     time: string;
     description: string;
     propertyId: string;
+    contact: string;
+    reminder: boolean;
   }>({
     title: '',
     type: 'Viewing',
     time: '09:00',
     description: '',
-    propertyId: ''
+    propertyId: '',
+    contact: '',
+    reminder: false
   });
 
   // Helper to get YYYY-MM-DD in local time
@@ -179,7 +219,10 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
   };
 
   const saveManualEvent = () => {
-    const prop = properties.find(p => p.id === newEvent.propertyId);
+    const isCommTask = newEvent.type === 'Call' || newEvent.type === 'Email';
+    // If it's a call/email, force it to office. Otherwise use selected property.
+    const prop = isCommTask ? null : properties.find(p => p.id === newEvent.propertyId);
+    
     const dateStr = formatDateKey(selectedDate);
     
     const event: CalendarEvent = {
@@ -189,12 +232,14 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       time: newEvent.time,
       type: newEvent.type,
       description: newEvent.description,
-      propertyAddress: prop ? prop.address : 'General Appointment'
+      propertyAddress: isCommTask ? 'General / Office' : (prop ? prop.address : 'General / Office'),
+      contact: isCommTask ? newEvent.contact : undefined,
+      reminderSet: newEvent.reminder
     };
 
     onAddEvent(event);
     setIsModalOpen(false);
-    setNewEvent({ title: '', type: 'Viewing', time: '09:00', description: '', propertyId: '' });
+    setNewEvent({ title: '', type: 'Viewing', time: '09:00', description: '', propertyId: '', contact: '', reminder: false });
   };
 
   // Merge Automated Data with Manual Events
@@ -343,13 +388,18 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       events = events.filter(e => 
         e.title.toLowerCase().includes(lower) || 
         (e.propertyAddress || '').toLowerCase().includes(lower) ||
-        (e.description || '').toLowerCase().includes(lower)
+        (e.description || '').toLowerCase().includes(lower) ||
+        (e.contact || '').toLowerCase().includes(lower)
       );
     }
 
     // 2. Type Filter
     if (filterType !== 'All') {
-      events = events.filter(e => e.type === filterType || (filterType === 'Viewing' && (e.type === 'Lease' || e.type === 'Viewing')));
+      if (filterType === 'Communication') {
+          events = events.filter(e => e.type === 'Call' || e.type === 'Email');
+      } else {
+          events = events.filter(e => e.type === filterType || (filterType === 'Viewing' && (e.type === 'Lease' || e.type === 'Viewing')));
+      }
     }
 
     // 3. Custom Ordering (Voice Command)
@@ -475,7 +525,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
       {/* Right: Agenda & AI Tools View */}
       <div className="w-full lg:w-[400px] flex flex-col space-y-6 shrink-0">
         
-        {/* 1. Schedule Assistant (AI) - Now SEPARATE */}
+        {/* 1. Schedule Assistant (AI) */}
         <div className="animate-in fade-in slide-in-from-top-4 duration-500">
             <ScheduleAssistant 
                 currentDate={selectedDate}
@@ -497,7 +547,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                     <h3 className="text-3xl font-black text-slate-900">{selectedDate.getDate()}</h3>
                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedDate.toLocaleString('default', { month: 'long', weekday: 'long' })}</p>
                 </div>
-                {/* Manual Add Button - Moved here */}
+                {/* Manual Add Button */}
                 <button 
                     onClick={() => setIsModalOpen(true)}
                     className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-indigo-600 transition-all active:scale-95 group"
@@ -513,7 +563,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                 <div className="relative">
                     <input 
                         type="text" 
-                        placeholder="Filter by address or task..." 
+                        placeholder="Filter by address, contact or task..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400"
@@ -524,8 +574,14 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                 <div className="flex justify-between items-center">
                     {/* Filter Tabs */}
                     <div className="flex gap-1 overflow-x-auto no-scrollbar">
-                        {(['All', 'Inspection', 'Maintenance', 'Viewing'] as const).map(type => {
-                            const count = rawSelectedDayEvents.filter(e => type === 'All' ? true : e.type === type).length;
+                        {(['All', 'Inspection', 'Maintenance', 'Viewing', 'Communication'] as const).map(type => {
+                            let count = 0;
+                            if (type === 'Communication') {
+                                count = rawSelectedDayEvents.filter(e => e.type === 'Call' || e.type === 'Email').length;
+                            } else {
+                                count = rawSelectedDayEvents.filter(e => type === 'All' ? true : e.type === type).length;
+                            }
+                            
                             if (type !== 'All' && count === 0) return null; // Hide empty categories to save space
                             
                             return (
@@ -538,7 +594,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
                                         : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
                                     }`}
                                 >
-                                    {type} <span className="opacity-60 ml-0.5">({count})</span>
+                                    {type === 'Communication' ? 'Calls/Emails' : type} <span className="opacity-60 ml-0.5">({count})</span>
                                 </button>
                             )
                         })}
@@ -618,8 +674,8 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center space-x-3"><div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" /><span className="text-xs font-bold">Routine</span></div>
             <div className="flex items-center space-x-3"><div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" /><span className="text-xs font-bold">VCAT / Legal</span></div>
-            <div className="flex items-center space-x-3"><div className="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]" /><span className="text-xs font-bold">Leasing View</span></div>
-            <div className="flex items-center space-x-3"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" /><span className="text-xs font-bold">Lease Renew</span></div>
+            <div className="flex items-center space-x-3"><div className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" /><span className="text-xs font-bold">Calls</span></div>
+            <div className="flex items-center space-x-3"><div className="w-2.5 h-2.5 rounded-full bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]" /><span className="text-xs font-bold">Emails</span></div>
           </div>
         </div>
       </div>
@@ -640,7 +696,7 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Event Type</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {['Viewing', 'Inspection', 'Legal'].map(type => (
+                  {['Viewing', 'Inspection', 'Legal', 'Call', 'Email'].map(type => (
                     <button 
                       key={type}
                       onClick={() => setNewEvent({...newEvent, type: type as any})}
@@ -653,36 +709,65 @@ const Schedule: React.FC<ScheduleProps> = ({ properties = [], maintenanceTasks =
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Title</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Subject</label>
                 <input 
                   type="text" 
                   value={newEvent.title}
                   onChange={e => setNewEvent({...newEvent, title: e.target.value})}
-                  placeholder="e.g. Open for Inspection"
+                  placeholder="e.g. Open for Inspection or Call Landlord"
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
               </div>
+
+              {(newEvent.type === 'Call' || newEvent.type === 'Email') && (
+                <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Contact Name / Number</label>
+                    <input 
+                    type="text" 
+                    value={newEvent.contact}
+                    onChange={e => setNewEvent({...newEvent, contact: e.target.value})}
+                    placeholder={newEvent.type === 'Call' ? "+61 4..." : "client@email.com"}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Related Property</label>
                 <select 
-                  value={newEvent.propertyId}
+                  value={(newEvent.type === 'Call' || newEvent.type === 'Email') ? "" : newEvent.propertyId}
                   onChange={e => setNewEvent({...newEvent, propertyId: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                  disabled={newEvent.type === 'Call' || newEvent.type === 'Email'}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-400"
                 >
                   <option value="">General / Office</option>
                   {properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}
                 </select>
+                {(newEvent.type === 'Call' || newEvent.type === 'Email') && (
+                    <p className="text-[10px] text-slate-400 mt-1 italic">Office task only - No travel required.</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Time</label>
-                <input 
-                  type="time" 
-                  value={newEvent.time}
-                  onChange={e => setNewEvent({...newEvent, time: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
+                <div className="flex gap-4 items-center">
+                    <input 
+                        type="time" 
+                        value={newEvent.time}
+                        onChange={e => setNewEvent({...newEvent, time: e.target.value})}
+                        className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                    {/* Notification Toggle */}
+                    <div 
+                        className={`flex items-center gap-2 px-3 py-3 rounded-xl border-2 cursor-pointer transition-all ${newEvent.reminder ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'}`}
+                        onClick={() => setNewEvent({...newEvent, reminder: !newEvent.reminder})}
+                    >
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${newEvent.reminder ? 'bg-amber-500 border-amber-500' : 'border-slate-300'}`}>
+                            {newEvent.reminder && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <span className={`text-xs font-bold ${newEvent.reminder ? 'text-amber-700' : 'text-slate-400'}`}>Remind Me</span>
+                    </div>
+                </div>
               </div>
 
               <div>
