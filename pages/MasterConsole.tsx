@@ -70,6 +70,9 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetData, setResetData] = useState({ email: '', newPassword: '' });
 
+  // Delete Confirmation State
+  const [agencyToDelete, setAgencyToDelete] = useState<Agency | null>(null);
+
   useEffect(() => {
       // Load from Central Registry (Cloud Sim)
       db.centralRegistry.listAgencies().then(data => {
@@ -168,10 +171,11 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
       alert(`Agency '${updates.name}' updated successfully.`);
   };
 
-  const handleDelete = async (agency: Agency) => {
-      if (window.confirm(`DELETE ACCOUNT WARNING:\n\nAre you sure you want to permanently remove "${agency.name}"?\n\nThis will remove their access immediately. This action cannot be undone.`)) {
-          await db.centralRegistry.deleteAgency(agency.id);
-          setAgencies(prev => prev.filter(a => a.id !== agency.id));
+  const handleExecuteDelete = async () => {
+      if (agencyToDelete) {
+          await db.centralRegistry.deleteAgency(agencyToDelete.id);
+          setAgencies(prev => prev.filter(a => a.id !== agencyToDelete.id));
+          setAgencyToDelete(null);
       }
   };
 
@@ -357,7 +361,7 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
 
                         {/* Delete Button */}
                         <button 
-                            onClick={() => handleDelete(agency)}
+                            onClick={() => setAgencyToDelete(agency)}
                             className="p-2 text-slate-400 hover:text-rose-600 bg-slate-50 hover:bg-rose-50 rounded-lg transition-colors ml-2"
                             title="Permanently Delete Account"
                         >
@@ -603,6 +607,27 @@ const MasterConsole: React.FC<MasterConsoleProps> = ({ onImpersonate }) => {
                 </div>
             </div>
           </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {agencyToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setAgencyToDelete(null)} />
+            <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 text-center animate-in zoom-in-95">
+                <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Agency?</h3>
+                <p className="text-sm text-slate-500 mb-6">
+                    Are you sure you want to permanently delete <span className="font-bold text-slate-900">{agencyToDelete.name}</span>? 
+                    <br/><br/>This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                    <button onClick={() => setAgencyToDelete(null)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50">Cancel</button>
+                    <button onClick={handleExecuteDelete} className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-700 shadow-xl shadow-rose-200">Delete</button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );
