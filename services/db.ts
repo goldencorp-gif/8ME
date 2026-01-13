@@ -255,5 +255,56 @@ export const db = {
       const list = await dbRead<HistoryRecord[]>('history', []);
       await dbWrite('history', [record, ...list]);
     }
+  },
+
+  // NEW: Backup & Restore Service
+  backup: {
+    createSnapshot: async () => {
+        const prefix = getStoragePrefix();
+        const snapshot: any = {
+            timestamp: new Date().toISOString(),
+            version: '1.0',
+            data: {}
+        };
+        
+        // Define all tables to backup
+        const tables = ['properties', 'transactions', 'maintenance', 'calendar', 'logbook', 'history', 'users'];
+        
+        for (const table of tables) {
+            const data = await dbRead(table, []);
+            snapshot.data[table] = data;
+        }
+
+        // Include Agency Settings separately as it doesn't use the dbRead wrapper
+        try {
+            const settings = localStorage.getItem('proptrust_agency_settings');
+            if (settings) snapshot.data['agency_settings'] = JSON.parse(settings);
+        } catch(e) {}
+
+        return JSON.stringify(snapshot, null, 2);
+    },
+    restoreSnapshot: async (jsonString: string) => {
+        try {
+            const snapshot = JSON.parse(jsonString);
+            if (!snapshot.data) throw new Error("Invalid snapshot format");
+
+            const prefix = getStoragePrefix();
+            const tables = ['properties', 'transactions', 'maintenance', 'calendar', 'logbook', 'history', 'users'];
+
+            for (const table of tables) {
+                if (snapshot.data[table]) {
+                    await dbWrite(table, snapshot.data[table]);
+                }
+            }
+
+            if (snapshot.data['agency_settings']) {
+                localStorage.setItem('proptrust_agency_settings', JSON.stringify(snapshot.data['agency_settings']));
+            }
+
+            return { success: true, message: "System restored successfully. Please refresh." };
+        } catch (e: any) {
+            return { success: false, message: e.message || "Restore failed" };
+        }
+    }
   }
 };

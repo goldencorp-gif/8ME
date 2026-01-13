@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, UserAccount } from '../types';
 import { db } from '../services/db';
 import { getStripeConfig } from '../services/stripeService';
@@ -26,7 +26,7 @@ async function hashPassword(password: string): Promise<string> {
 
 const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users, onUpdateUsers }) => {
   const { logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'billing' | 'integrations'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'billing' | 'integrations' | 'data'>('profile');
   
   // Agency Config
   const [agencyDetails, setAgencyDetails] = useState({
@@ -45,6 +45,9 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   const [activationKey, setActivationKey] = useState('');
   const [stripeLinks, setStripeLinks] = useState({ starter: '', growth: '', enterprise: '' });
   const [isActivating, setIsActivating] = useState(false);
+
+  // Data Restore State
+  const restoreFileRef = useRef<HTMLInputElement>(null);
 
   // Load Settings on Mount
   useEffect(() => {
@@ -160,6 +163,40 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
     }
   };
 
+  const handleBackup = async () => {
+      const json = await db.backup.createSnapshot();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `8me_agency_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+  };
+
+  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!window.confirm("WARNING: Restoring data will OVERWRITE your current database. This action cannot be undone. Are you sure?")) {
+          if (restoreFileRef.current) restoreFileRef.current.value = '';
+          return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+          const json = event.target?.result as string;
+          if (json) {
+              const result = await db.backup.restoreSnapshot(json);
+              alert(result.message);
+              if (result.success) {
+                  window.location.reload();
+              }
+          }
+      };
+      reader.readAsText(file);
+  };
+
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400";
 
   return (
@@ -168,13 +205,13 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200">
-        {['profile', 'team', 'billing', 'integrations'].map(tab => (
+        {['profile', 'team', 'billing', 'integrations', 'data'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
             className={`px-6 py-3 text-sm font-bold uppercase tracking-widest border-b-2 transition-colors ${activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
           >
-            {tab}
+            {tab === 'data' ? 'Data & Backup' : tab}
           </button>
         ))}
       </div>
@@ -387,6 +424,72 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded uppercase tracking-widest">Active</span>
              </div>
           </div>
+        )}
+
+        {activeTab === 'data' && (
+            <div className="space-y-6">
+                <div>
+                    <h3 className="text-xl font-bold text-slate-900">Data Management</h3>
+                    <p className="text-slate-500 text-sm mt-1">Backup your agency data before updates or switching devices.</p>
+                </div>
+
+                <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <div className="flex items-start gap-4">
+                        <div className="p-3 bg-white rounded-xl shadow-sm text-amber-600">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-amber-900">Local-First Storage</h4>
+                            <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                                8ME stores data directly in your browser. If you clear your cache or the system is updated to a new URL, data may be reset.
+                                <br/><br/>
+                                <strong>Recommendation:</strong> Download a backup regularly.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 mb-4">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            </div>
+                            <h4 className="font-bold text-slate-900">Backup Data</h4>
+                            <p className="text-xs text-slate-500 mt-1">Download a full snapshot of your properties, tenants, and ledgers.</p>
+                        </div>
+                        <button 
+                            onClick={handleBackup}
+                            className="w-full mt-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl"
+                        >
+                            Download Snapshot
+                        </button>
+                    </div>
+
+                    <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 mb-4">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            </div>
+                            <h4 className="font-bold text-slate-900">Restore Data</h4>
+                            <p className="text-xs text-slate-500 mt-1">Upload a previously saved snapshot to restore your agency state.</p>
+                        </div>
+                        <button 
+                            onClick={() => restoreFileRef.current?.click()}
+                            className="w-full mt-6 py-3 bg-white border-2 border-emerald-500 text-emerald-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-50"
+                        >
+                            Upload File
+                        </button>
+                        <input 
+                            type="file" 
+                            ref={restoreFileRef}
+                            className="hidden" 
+                            accept=".json"
+                            onChange={handleRestore}
+                        />
+                    </div>
+                </div>
+            </div>
         )}
       </div>
 
