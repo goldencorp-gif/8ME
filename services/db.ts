@@ -102,6 +102,12 @@ export const db = {
        const updated = agencies.map(a => a.id === id ? { ...a, ...updates } : a);
        localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
     },
+    // New: Allow Master to delete agency
+    deleteAgency: async (id: string) => {
+       const agencies = await db.centralRegistry.listAgencies();
+       const updated = agencies.filter(a => a.id !== id);
+       localStorage.setItem('proptrust_central_agencies', JSON.stringify(updated));
+    },
     // EXPORT: For manual sync
     exportRegistry: async (): Promise<string> => {
         const data = localStorage.getItem('proptrust_central_agencies');
