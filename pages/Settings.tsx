@@ -1,12 +1,25 @@
-
 import React, { useState, useEffect } from 'react';
 import { UserProfile, UserAccount } from '../types';
+import { db } from '../services/db';
+import { getStripeConfig } from '../services/stripeService';
 
 interface SettingsProps {
   userProfile: UserProfile;
   onUpdateProfile: (profile: UserProfile) => void;
   users: UserAccount[];
   onUpdateUsers: (users: UserAccount[]) => void;
+}
+
+// Helper to hash password (client-side simulation matching AuthContext/MasterConsole)
+async function hashPassword(password: string): Promise<string> {
+  if (!window.crypto || !window.crypto.subtle) {
+    return btoa(`fallback_hash_${password}`).split('').reverse().join('');
+  }
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users, onUpdateUsers }) => {
@@ -22,6 +35,13 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
 
   // AI API Key State
   const [aiApiKey, setAiApiKey] = useState('');
+
+  // Payment & Activation State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<'Starter' | 'Growth' | 'Enterprise' | null>(null);
+  const [activationKey, setActivationKey] = useState('');
+  const [stripeLinks, setStripeLinks] = useState({ starter: '', growth: '', enterprise: '' });
+  const [isActivating, setIsActivating] = useState(false);
 
   // Load Settings on Mount
   useEffect(() => {
@@ -39,6 +59,15 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
     if (userProfile.plan) {
         setAgencyDetails(prev => ({ ...prev, subscriptionPlan: userProfile.plan! }));
     }
+
+    // Load Stripe Links
+    getStripeConfig().then(config => {
+        setStripeLinks({
+            starter: config.starterLink,
+            growth: config.growthLink,
+            enterprise: config.enterpriseLink
+        });
+    });
   }, [userProfile.plan]);
 
   const handleSaveApiKey = () => {
@@ -49,16 +78,58 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   };
 
   const handleSubscribe = (plan: 'Trial' | 'Starter' | 'Growth' | 'Enterprise') => {
-    // 1. Update Local Settings
-    setAgencyDetails(prev => ({ ...prev, subscriptionPlan: plan }));
-    
-    // 2. Update User Profile to Unlock Features Immediately
-    onUpdateProfile({
-        ...userProfile,
-        plan: plan
-    });
+    if (plan === 'Trial') return; // Cannot switch back to Trial manually
+    setPendingPlan(plan as 'Starter' | 'Growth' | 'Enterprise');
+    setShowPaymentModal(true);
+    setActivationKey('');
+  };
 
-    alert(`Switched to ${plan} plan successfully. Restricted modules are now unlocked.`);
+  const handleActivatePlan = async () => {
+      if (!activationKey) {
+          alert("Please enter the Activation Key sent to your email.");
+          return;
+      }
+      setIsActivating(true);
+
+      try {
+          // 1. Hash the input key to match stored credentials
+          const hash = await hashPassword(activationKey);
+          
+          // 2. Check Central Registry for this user's email
+          // The Admin must have created the agency record in Master Console with this key
+          const agency = await db.centralRegistry.getAgencyByEmail(userProfile.email);
+
+          if (agency && agency.passwordHash === hash) {
+              // 3. Verify the plan matches (or just upgrade them to whatever the Admin set)
+              const newPlan = agency.subscriptionPlan;
+              
+              if (pendingPlan && newPlan !== pendingPlan) {
+                  // If Admin set a different plan than clicked, warn but allow
+                  console.warn(`Plan mismatch. User selected ${pendingPlan}, Admin issued ${newPlan}. Upgrading to ${newPlan}.`);
+              }
+
+              // 4. Update Local Settings
+              setAgencyDetails(prev => ({ ...prev, subscriptionPlan: newPlan }));
+              
+              // 5. Update User Profile to Unlock Features
+              onUpdateProfile({
+                  ...userProfile,
+                  plan: newPlan
+              });
+
+              setShowPaymentModal(false);
+              setPendingPlan(null);
+              setActivationKey('');
+              alert(`Activation Successful! Your agency is now on the ${newPlan} plan.`);
+          } else {
+              alert("Invalid Activation Key. Please ensure payment is confirmed and you are using the key emailed by support.");
+          }
+      } catch (error) {
+          console.error(error);
+          alert("An error occurred during activation.");
+      } finally {
+          setIsActivating(false);
+      }
   };
 
   const handleEditUser = (user: UserAccount) => {
@@ -90,7 +161,7 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   const inputClass = "w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-900 bg-white placeholder:text-slate-400";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in pb-12">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in pb-12 relative">
       <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
 
       {/* Tabs */}
@@ -316,6 +387,64 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
           </div>
         )}
       </div>
+
+      {/* Payment / Activation Modal */}
+      {showPaymentModal && pendingPlan && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md animate-in fade-in" onClick={() => setShowPaymentModal(false)} />
+          <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 flex flex-col items-center text-center">
+             
+             <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+             </div>
+
+             <h3 className="text-2xl font-black text-slate-900 mb-2">Activate {pendingPlan}</h3>
+             <p className="text-sm text-slate-500 mb-8 max-w-xs">To upgrade your agency to the {pendingPlan} plan, please complete the payment securely.</p>
+
+             <div className="w-full space-y-6">
+                {/* Step 1: Payment */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Step 1: Payment</p>
+                   <a 
+                     href={pendingPlan === 'Starter' ? stripeLinks.starter : pendingPlan === 'Growth' ? stripeLinks.growth : stripeLinks.enterprise} 
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     className="block w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-95"
+                   >
+                     Pay via Stripe &rarr;
+                   </a>
+                </div>
+
+                <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-slate-200"></div>
+                    <span className="flex-shrink-0 mx-4 text-slate-300 text-xs font-bold uppercase tracking-widest">Then</span>
+                    <div className="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                {/* Step 2: Activation */}
+                <div className="text-left">
+                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Step 2: Enter Activation Key</label>
+                   <input 
+                      type="password"
+                      value={activationKey}
+                      onChange={(e) => setActivationKey(e.target.value)}
+                      placeholder="Paste key sent to your email..."
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-bold text-slate-900 mb-3"
+                   />
+                   <button 
+                      onClick={handleActivatePlan}
+                      disabled={isActivating || !activationKey}
+                      className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                   >
+                      {isActivating ? 'Verifying...' : 'Unlock Full Access'}
+                   </button>
+                </div>
+             </div>
+
+             <button onClick={() => setShowPaymentModal(false)} className="mt-6 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600">Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
