@@ -4,11 +4,11 @@
   "headerLogoUrl": "",
   "stripe": {
     "starterPriceId": "",
-    "starterLink": "https://buy.stripe.com/test_example1",
+    "starterLink": "https://buy.stripe.com/28E14g7Eb3vH55OdNY57W01",
     "growthPriceId": "",
-    "growthLink": "https://buy.stripe.com/test_example2",
+    "growthLink": "https://buy.stripe.com/28E14g7Eb3vH55OdNY57W01",
     "enterprisePriceId": "",
-    "enterpriseLink": "https://buy.stripe.com/test_example3",
-    "customerPortalLink": "https://billing.stripe.com/p/login/test_example4"
+    "enterpriseLink": "https://buy.stripe.com/28E14g7Eb3vH55OdNY57W01",
+    "customerPortalLink": ""
   }
 }

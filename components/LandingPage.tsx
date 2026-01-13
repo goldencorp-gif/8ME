@@ -198,7 +198,7 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
                </button>
             </div>
 
-            {/* Dashboard Preview - Professional Browser Frame with CSS Mockup */}
+            {/* Dashboard Preview */}
             <div className="mt-20 relative mx-auto max-w-5xl group">
                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-20 pointer-events-none"></div>
                
@@ -517,8 +517,8 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
       {/* Support Modal */}
       {showSupportModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm animate-in fade-in" onClick={() => setShowSupportModal(false)} />
-          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm" onClick={() => setShowSupportModal(false)} />
+          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden p-8">
              <div className="flex justify-between items-center mb-6">
                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Contact Support</h3>
                <button onClick={() => setShowSupportModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
@@ -555,8 +555,8 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
       {/* Status Modal */}
       {showStatusModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm animate-in fade-in" onClick={() => setShowStatusModal(false)} />
-          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm" onClick={() => setShowStatusModal(false)} />
+          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden p-8">
              <div className="flex justify-between items-center mb-6">
                <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -587,8 +587,8 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
       {/* Full Screen Legal Modal (Terms) */}
       {showTermsModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm animate-in fade-in" onClick={() => setShowTermsModal(false)} />
-          <div className="relative w-full max-w-4xl bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95">
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm" onClick={() => setShowTermsModal(false)} />
+          <div className="relative w-full max-w-4xl bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
              <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                <div>
                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">Master Service Agreement</h3>
@@ -626,8 +626,8 @@ This Agreement shall be governed by the laws of the State of Victoria, Australia
       {/* Registration Modal */}
       {showRegModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md animate-in fade-in" onClick={() => setShowRegModal(false)} />
-          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 p-8">
+          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" onClick={() => setShowRegModal(false)} />
+          <div className="relative w-full max-w-lg bg-white text-slate-900 rounded-[2rem] shadow-2xl overflow-hidden p-8">
              <div className="mb-6 text-center">
                <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
