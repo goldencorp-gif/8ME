@@ -1,14 +1,13 @@
-
 {
   "footerLogoUrl": "",
   "headerLogoUrl": "",
   "stripe": {
     "starterPriceId": "",
-    "starterLink": "https://buy.stripe.com/28E14g7Eb3vH55OdNY57W01",
+    "starterLink": "https://buy.stripe.com/5kQ8wI3nVfepfKsaBM57W03",
     "growthPriceId": "",
-    "growthLink": "https://buy.stripe.com/28E14g7Eb3vH55OdNY57W01",
+    "growthLink": "https://buy.stripe.com/3cIbIUe2zc2dgOw5hs57W04",
     "enterprisePriceId": "",
-    "enterpriseLink": "https://buy.stripe.com/28E14g7Eb3vH55OdNY57W01",
+    "enterpriseLink": "https://buy.stripe.com/9B68wIgaH9U5fKs9xI57W05",
     "customerPortalLink": ""
   }
 }
