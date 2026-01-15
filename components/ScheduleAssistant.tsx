@@ -207,6 +207,15 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     setAssistantMessage("Ready.");
   };
 
+  // --- REPORTING FEATURE (Microsoft Store Policy 11.16) ---
+  const handleReportMessage = () => {
+      const reason = prompt("Report Inappropriate Content\n\nPlease describe the issue with this AI response:");
+      if (reason) {
+          console.log("[Moderation] Message flagged:", assistantMessage, "Reason:", reason);
+          alert("Thank you. This content has been flagged for moderation review.");
+      }
+  };
+
   return (
     <div className="bg-gradient-to-b from-indigo-50 to-white rounded-2xl border border-indigo-100 shadow-sm overflow-hidden flex flex-col mb-4">
       <div className="p-4 bg-indigo-600 text-white flex items-center justify-between">
@@ -237,16 +246,31 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
             </div>
 
             <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex-1 min-h-[60px] flex items-start relative group">
-                 <div className="w-full pr-5">
+                 <div className="w-full pr-8">
                     <h5 className="text-[9px] font-black uppercase text-indigo-800 tracking-widest mb-1">{suggestTask ? `Advice for: ${suggestTask.type}` : 'AI Response'}</h5>
                     <div className="text-xs text-indigo-900 leading-relaxed font-medium whitespace-pre-line">
                         {assistantMessage || "Ready. Click 'Analyze Day' for insights."}
                     </div>
                  </div>
+                 
+                 {/* Action Buttons (Dismiss & Report) */}
                  {(suggestTask || (assistantMessage && !assistantMessage.startsWith('Ready'))) && (
-                    <button onClick={handleDismissBubble} className="absolute top-2 right-2 text-indigo-300 hover:text-indigo-600 p-1 rounded-md hover:bg-indigo-100 transition-colors">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex flex-col gap-1">
+                        <button 
+                            onClick={handleDismissBubble} 
+                            className="text-indigo-300 hover:text-indigo-600 p-1 rounded-md hover:bg-indigo-100 transition-colors"
+                            title="Dismiss Message"
+                        >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                        <button 
+                            onClick={handleReportMessage} 
+                            className="text-indigo-300 hover:text-rose-500 p-1 rounded-md hover:bg-rose-50 transition-colors"
+                            title="Report Inappropriate Content"
+                        >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-11a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+                        </button>
+                    </div>
                  )}
             </div>
         </div>

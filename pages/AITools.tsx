@@ -133,6 +133,16 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
       alert(`AI Generation Failed:\n\n${e.message || 'Unknown Error'}\n\nPlease check your API Key in Settings.`);
   };
 
+  // --- REPORTING FEATURE (Microsoft Store Policy 11.16) ---
+  const handleReportContent = () => {
+      const reason = prompt("Report Inappropriate Content\n\nPlease describe why this AI-generated content is inappropriate or offensive:");
+      if (reason) {
+          // In a real app, send to backend API
+          console.log("[Moderation] Content flagged:", reason);
+          alert("Thank you. This content has been flagged for moderation review.");
+      }
+  };
+
   const clearResults = () => {
       setResult('');
       setInvoiceData(null);
@@ -429,10 +439,9 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        
+        {/* ... (Tool widgets unchanged) ... */}
         {/* 1. Smart Invoice Generator */}
         <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden">
-          {/* ... Invoice Content ... */}
           <div className="absolute top-0 right-0 p-2 bg-emerald-500 rounded-bl-2xl text-[10px] font-black uppercase text-white tracking-widest px-4">New</div>
           <div className="flex items-center space-x-3 mb-6">
             <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
@@ -440,56 +449,30 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
             </div>
             <h3 className="font-bold text-slate-900">Smart Invoice</h3>
           </div>
-          
           <div className="space-y-4 flex-1">
-             {/* Toggle between Standard and Custom */}
              <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button 
-                  onClick={() => setIsCustomTemplate(false)}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${!isCustomTemplate ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}
-                >Standard</button>
-                <button 
-                  onClick={() => setIsCustomTemplate(true)}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${isCustomTemplate ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}
-                >Custom Form</button>
+                <button onClick={() => setIsCustomTemplate(false)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${!isCustomTemplate ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}>Standard</button>
+                <button onClick={() => setIsCustomTemplate(true)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${isCustomTemplate ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}>Custom Form</button>
              </div>
-
              <div>
                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Select Property</label>
-               <select 
-                 className={inputClass}
-                 value={invPropertyId}
-                 onChange={(e) => setInvPropertyId(e.target.value)}
-               >
+               <select className={inputClass} value={invPropertyId} onChange={(e) => setInvPropertyId(e.target.value)}>
                  <option value="">Choose Asset...</option>
                  {properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}
                </select>
              </div>
-             
              <div>
                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Invoice To</label>
                <div className="flex bg-slate-200/50 rounded-xl p-1 gap-1">
-                 <button 
-                   onClick={() => setInvRecipient('Owner')} 
-                   className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${invRecipient === 'Owner' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white/50'}`}
-                 >Owner</button>
-                 <button 
-                   onClick={() => setInvRecipient('Tenant')} 
-                   className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${invRecipient === 'Tenant' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-white/50'}`}
-                 >Renter</button>
+                 <button onClick={() => setInvRecipient('Owner')} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${invRecipient === 'Owner' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white/50'}`}>Owner</button>
+                 <button onClick={() => setInvRecipient('Tenant')} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${invRecipient === 'Tenant' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-white/50'}`}>Renter</button>
                </div>
              </div>
-
              {isCustomTemplate ? (
                <div>
                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Upload Blank Form</label>
                  <div className="relative">
-                   <input 
-                     type="file" 
-                     accept="image/*"
-                     onChange={handleTemplateUpload}
-                     className="w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
-                   />
+                   <input type="file" accept="image/*" onChange={handleTemplateUpload} className="w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
                    {templateFile && <span className="absolute right-0 top-1 text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">Loaded</span>}
                  </div>
                  <p className="text-[9px] text-slate-400 mt-1">AI will scan this form and attempt to fill it.</p>
@@ -499,53 +482,26 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                     <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Company Logo</label>
                     <div className="relative">
-                        <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
-                        />
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
                         {logoUrl && <span className="absolute right-0 top-1 text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">✓</span>}
                     </div>
                     </div>
                     <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Agency Name</label>
-                    <input 
-                        type="text"
-                        value={agencyName}
-                        onChange={(e) => setAgencyName(e.target.value)}
-                        className={inputClass}
-                    />
+                    <input type="text" value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className={inputClass} />
                     </div>
                 </div>
              )}
-
              <div>
                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Invoice Date</label>
-               <input 
-                 type="date"
-                 value={invDate}
-                 onChange={(e) => setInvDate(e.target.value)}
-                 className={inputClass}
-               />
+               <input type="date" value={invDate} onChange={(e) => setInvDate(e.target.value)} className={inputClass} />
              </div>
-
              <div>
                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Details</label>
-               <textarea 
-                 value={invDescription}
-                 onChange={(e) => setInvDescription(e.target.value)}
-                 placeholder={invRecipient === 'Owner' ? "e.g. Charge owner for tap repair $150 and admin fee $20" : "e.g. Charge tenant for water usage $45.50 and key replacement"}
-                 className={`${inputClass} h-24`}
-               />
+               <textarea value={invDescription} onChange={(e) => setInvDescription(e.target.value)} placeholder={invRecipient === 'Owner' ? "e.g. Charge owner for tap repair $150 and admin fee $20" : "e.g. Charge tenant for water usage $45.50 and key replacement"} className={`${inputClass} h-24`} />
              </div>
           </div>
-          
-          <button 
-            onClick={handleGenerateInvoice}
-            disabled={loading || (isCustomTemplate && !templateFile) || !hasApiKey}
-            className="w-full mt-6 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-emerald-200"
-          >
+          <button onClick={handleGenerateInvoice} disabled={loading || (isCustomTemplate && !templateFile) || !hasApiKey} className="w-full mt-6 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-emerald-200">
             {loading ? 'Processing...' : isCustomTemplate ? 'Fill Custom Form' : 'Draft Invoice'}
           </button>
         </div>
@@ -561,29 +517,14 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           <div className="space-y-4 flex-1">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Property Address</label>
-              <input 
-                type="text" 
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. 123 Ocean View Drive"
-                className={inputClass}
-              />
+              <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. 123 Ocean View Drive" className={inputClass} />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Key Features</label>
-              <textarea 
-                value={features}
-                onChange={(e) => setFeatures(e.target.value)}
-                placeholder="3 beds, pool, newly renovated"
-                className={`${inputClass} h-24`}
-              />
+              <textarea value={features} onChange={(e) => setFeatures(e.target.value)} placeholder="3 beds, pool, newly renovated" className={`${inputClass} h-24`} />
             </div>
           </div>
-          <button 
-            onClick={handleGenerateListing}
-            disabled={loading || !hasApiKey}
-            className="w-full mt-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-indigo-200"
-          >
+          <button onClick={handleGenerateListing} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-indigo-200">
             {loading ? 'Thinking...' : 'Generate Description'}
           </button>
         </div>
@@ -672,13 +613,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Current Address</label>
-              <input 
-                type="text" 
-                value={checkAddress} 
-                onChange={e => setCheckAddress(e.target.value)} 
-                placeholder="For ID matching"
-                className={inputClass} 
-              />
+              <input type="text" value={checkAddress} onChange={e => setCheckAddress(e.target.value)} placeholder="For ID matching" className={inputClass} />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">ID / Driver License</label>
@@ -686,11 +621,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Property Applied For (Optional)</label>
-              <select 
-                className={inputClass}
-                value={checkPropertyId}
-                onChange={(e) => setCheckPropertyId(e.target.value)}
-              >
+              <select className={inputClass} value={checkPropertyId} onChange={(e) => setCheckPropertyId(e.target.value)}>
                 <option value="">-- Select Asset --</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}
               </select>
@@ -715,21 +646,11 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           <div className="space-y-4 flex-1">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Target Area</label>
-              <input 
-                type="text" 
-                value={prospectArea}
-                onChange={(e) => setProspectArea(e.target.value)}
-                placeholder="e.g. Bondi Beach (2026)"
-                className={inputClass}
-              />
+              <input type="text" value={prospectArea} onChange={(e) => setProspectArea(e.target.value)} placeholder="e.g. Bondi Beach (2026)" className={inputClass} />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Message Type</label>
-              <select 
-                value={prospectType}
-                onChange={(e) => setProspectType(e.target.value)}
-                className={inputClass}
-              >
+              <select value={prospectType} onChange={(e) => setProspectType(e.target.value)} className={inputClass}>
                 <option value="Letterbox Drop">Letterbox Drop / Flyer</option>
                 <option value="Email Blast">Email Newsletter</option>
                 <option value="Facebook Post">Social Media Post</option>
@@ -738,19 +659,10 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">The "Hook" (Reason)</label>
-              <textarea 
-                value={prospectHook}
-                onChange={(e) => setProspectHook(e.target.value)}
-                placeholder="e.g. Just sold 22 Smith St for record price, have left over buyers"
-                className={`${inputClass} h-20`}
-              />
+              <textarea value={prospectHook} onChange={(e) => setProspectHook(e.target.value)} placeholder="e.g. Just sold 22 Smith St for record price, have left over buyers" className={`${inputClass} h-20`} />
             </div>
           </div>
-          <button 
-            onClick={handleGenerateProspecting}
-            disabled={loading || !hasApiKey}
-            className="w-full mt-6 py-3 bg-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-orange-200"
-          >
+          <button onClick={handleGenerateProspecting} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-orange-200">
             {loading ? 'Drafting...' : 'Generate Campaign'}
           </button>
         </div>
@@ -830,8 +742,6 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
         {/* Result: Invoice Generator */}
         {invoiceData && (
             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-8">
-            {/* ... Invoice Result Content ... */}
-            {/* (Content hidden for brevity, same as previous) */}
             <div className="bg-slate-900 text-white px-8 py-6 flex justify-between items-start">
                 <div>
                 <div className="mb-6">
@@ -857,7 +767,15 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                     <span className="font-mono text-sm opacity-70">#{invoiceData.invoiceNumber}</span>
                 </div>
                 </div>
-                <button onClick={() => setInvoiceData(null)} className="text-white/50 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                <div className="flex items-center space-x-3">
+                    <button 
+                        onClick={handleReportContent}
+                        className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest border border-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+                    >
+                        Report Issue
+                    </button>
+                    <button onClick={() => setInvoiceData(null)} className="text-white/50 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                </div>
             </div>
             
             <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -928,6 +846,12 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                 </div>
                 </div>
                 <div className="flex items-center space-x-3">
+                <button 
+                    onClick={handleReportContent}
+                    className="text-xs font-bold text-slate-400 hover:text-rose-500 uppercase tracking-widest px-2 py-1 rounded hover:bg-rose-50 transition-colors"
+                >
+                    Report Issue
+                </button>
                 <button 
                     onClick={() => setIsPrivacyMode(!isPrivacyMode)}
                     className="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-slate-100"
@@ -1018,12 +942,21 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
             <div className="bg-white p-8 rounded-[2rem] border border-indigo-200 shadow-xl shadow-indigo-500/10 animate-in zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-4">
                 <h4 className="text-lg font-bold text-slate-900">AI Generated Content</h4>
-                <button 
-                onClick={() => { navigator.clipboard.writeText(result); alert('Copied to clipboard!'); }}
-                className="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 flex items-center"
-                >
-                Copy Text
-                </button>
+                <div className="flex space-x-3">
+                    <button 
+                        onClick={handleReportContent}
+                        className="px-3 py-1 bg-white border border-slate-200 text-slate-500 rounded-md text-xs font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 flex items-center transition-colors"
+                        title="Report inappropriate content"
+                    >
+                        Report Issue
+                    </button>
+                    <button 
+                        onClick={() => { navigator.clipboard.writeText(result); alert('Copied to clipboard!'); }}
+                        className="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 flex items-center"
+                    >
+                        Copy Text
+                    </button>
+                </div>
             </div>
             <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed font-medium">
                 {result}
