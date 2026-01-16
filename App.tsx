@@ -297,6 +297,33 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
+  // Helper for Rent Calculation
+  const getRentBreakdown = (amount: number, frequency: string) => {
+    let weekly = 0;
+    let monthly = 0;
+    let annual = 0;
+
+    if (frequency === 'Weekly') {
+      weekly = amount;
+      annual = amount * 52;
+      monthly = annual / 12;
+    } else if (frequency === 'Monthly') {
+      monthly = amount;
+      annual = amount * 12;
+      weekly = annual / 52;
+    } else if (frequency === 'Annually') {
+      annual = amount;
+      monthly = annual / 12;
+      weekly = annual / 52;
+    }
+
+    return { 
+      weekly: weekly, 
+      monthly: monthly, 
+      annual: annual 
+    };
+  };
+
   const renderContent = () => {
     // If data loading, show spinner
     if (loadingData) return <div className="flex flex-col items-center justify-center h-[60vh] text-center text-slate-400 italic uppercase tracking-widest animate-pulse">Loading Secure Data...</div>;
@@ -366,7 +393,10 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12 px-4">
-                {properties.map(prop => (
+                {properties.map(prop => {
+                  const rentData = getRentBreakdown(prop.rentAmount, prop.rentFrequency);
+                  
+                  return (
                   <div key={prop.id} onClick={() => setSelectedProperty(prop)} className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-200 shadow-sm group hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 cursor-pointer relative">
                     <div className="relative h-56 overflow-hidden">
                       <div className="absolute top-4 left-4 z-10">
@@ -396,9 +426,25 @@ const App: React.FC = () => {
                       </div>
                     </div>
                     <div className="p-8">
-                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="font-black text-xl text-slate-900 leading-tight w-2/3">{prop.address.split(',')[0]}</h3>
-                        <p className="text-xl font-bold text-indigo-600">${prop.rentAmount}<span className="text-xs text-slate-400 font-normal">/{prop.rentFrequency === 'Weekly' ? 'pw' : 'mo'}</span></p>
+                      <div className="flex justify-between items-start mb-6">
+                        <h3 className="font-black text-xl text-slate-900 leading-tight w-1/2">{prop.address.split(',')[0]}</h3>
+                        <div className="text-right w-1/2">
+                            <p className="text-lg font-black text-indigo-600">
+                                ${prop.rentAmount.toLocaleString()}
+                                <span className="text-xs text-slate-400 font-bold ml-1">{prop.includesGst ? 'inc.' : '+'} GST</span>
+                            </p>
+                            <div className="flex flex-col gap-0.5 mt-1">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    ${rentData.weekly.toLocaleString(undefined, {maximumFractionDigits:0})}/wk
+                                </p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    ${rentData.monthly.toLocaleString(undefined, {maximumFractionDigits:0})}/mo
+                                </p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    ${rentData.annual.toLocaleString(undefined, {maximumFractionDigits:0})}/yr
+                                </p>
+                            </div>
+                        </div>
                       </div>
                       <div className="flex space-x-4 mb-6">
                         {prop.beds && <span className="flex items-center text-xs font-bold text-slate-500"><span className="text-slate-900 mr-1.5 text-sm">{prop.beds}</span> Beds</span>}
@@ -414,7 +460,8 @@ const App: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
