@@ -1,4 +1,3 @@
-
 {
   "id": "/",
   "short_name": "8ME",
@@ -49,7 +48,13 @@
       "src": "https://placehold.co/512x512/0f172a/ffffff.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://placehold.co/512x512/0f172a/ffffff.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
