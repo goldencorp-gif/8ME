@@ -80,6 +80,13 @@ const cleanJsonString = (text: string | undefined | null) => {
   return clean;
 };
 
+// Helper to clean HTML string from Markdown
+const cleanHtmlOutput = (text: string | undefined | null) => {
+  if (!text) return '';
+  // Remove markdown code blocks like ```html ... ```
+  return text.replace(/```html/g, '').replace(/```/g, '').trim();
+};
+
 // --- CORE GENERATION FUNCTIONS ---
 
 export const generatePropertyDescription = async (address: string, features: string[]) => {
@@ -452,6 +459,6 @@ export const generateOfficialDocument = async (formType: string, contextData: an
     contents: prompt,
   });
   
-  return cleanJsonString(response.text) // In case it wraps it in JSON/Code block, clean it
-         .replace(/^```html/, '').replace(/^```/, ''); // Extra cleanup just in case
+  // Use cleanHtmlOutput to properly handle HTML output
+  return cleanHtmlOutput(response.text);
 };
