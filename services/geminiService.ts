@@ -424,3 +424,34 @@ export const generateLogbookEntriesFromSchedule = async (events: any[], officeAd
   });
   return JSON.parse(cleanJsonString(response.text));
 };
+
+export const generateOfficialDocument = async (formType: string, contextData: any) => {
+  const key = getApiKey();
+  if (!key) throw new Error("API Key Missing");
+
+  const ai = new GoogleGenAI({ apiKey: key });
+  
+  const prompt = `
+    You are an expert Real Estate Agency Administrator in Australia.
+    Task: Generate a professional, legally-compliant ${formType}.
+    
+    Context Data:
+    ${JSON.stringify(contextData, null, 2)}
+    
+    Instructions:
+    1. Return valid HTML code ONLY. No markdown backticks.
+    2. Include professional CSS styling within a <style> block. The style should be suitable for print/PDF (white background, black text, clear headers).
+    3. Pre-fill all fields possible using the Context Data.
+    4. Leave placeholders (e.g., [Signature]) for fields that cannot be filled.
+    5. The document should look like a standard official real estate form.
+    6. Include a section at the bottom for "Agency Use Only" or "Signatures".
+  `;
+
+  const response = await generateContentWithRetry(ai, {
+    model: 'gemini-3-flash-preview',
+    contents: prompt,
+  });
+  
+  return cleanJsonString(response.text) // In case it wraps it in JSON/Code block, clean it
+         .replace(/^```html/, '').replace(/^```/, ''); // Extra cleanup just in case
+};
