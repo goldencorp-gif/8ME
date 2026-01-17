@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { CalendarEvent, Property } from "../types";
 
@@ -125,7 +126,7 @@ export const generateOfficialDocument = async (formType: string, context: any) =
     Do NOT include markdown backticks. Just raw HTML code.`;
     
     const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3-flash-preview',
         contents: prompt
     });
     let html = response.text || "";
@@ -164,7 +165,7 @@ export const parseTransactionFromText = async (input: string) => {
 export const parseBankStatement = async (base64Image: string) => {
     const ai = getAI();
     const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3-flash-preview',
         contents: [
             { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
             { text: `Analyze this bank statement image. Extract all transactions into a JSON array.
@@ -272,7 +273,7 @@ export const optimizeScheduleOrder = async (events: CalendarEvent[]) => {
     const ai = getAI();
     const eventList = events.map(e => ({ id: e.id, address: e.propertyAddress, time: e.time }));
     const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3-flash-preview',
         contents: `Optimize the route for these real estate appointments to minimize travel time. Start at 9am.
         Events: ${JSON.stringify(eventList)}
         
