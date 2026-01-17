@@ -495,6 +495,7 @@ export const generateOfficialDocument = async (formType: string, contextData: an
     7. Leave placeholders (e.g., [Signature]) for fields that cannot be filled.
     8. The document should look like a standard official real estate form.
     9. Include a section at the bottom for "Agency Use Only" or "Signatures".
+    10. CRITICAL: The Agency Management Fee provided in the context is EXCLUSIVE of GST. When stating the fee in the document, you MUST write it as "X% + GST" or "X% plus GST". Do NOT write "GST included" or "Inc GST".
   `;
 
   const response = await generateContentWithRetry(ai, {
