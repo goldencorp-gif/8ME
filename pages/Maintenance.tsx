@@ -47,7 +47,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ tasks, properties, onAddTask,
     if (!formData.issue) return;
     setLoadingAi(true);
     const suggestedPriority = await prioritizeMaintenance(formData.issue);
-    setFormData(prev => ({ ...prev, priority: suggestedPriority }));
+    setFormData(prev => ({ ...prev, priority: suggestedPriority as MaintenanceTask['priority'] }));
     setLoadingAi(false);
   };
 

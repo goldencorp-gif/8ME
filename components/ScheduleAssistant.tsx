@@ -198,7 +198,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     if (!q) return;
     setProcessing(true);
     const summary = await summarizePropertyHistory(q, allHistoryEvents);
-    setHistoryResult(summary);
+    setHistoryResult(summary || '');
     setProcessing(false);
   };
 
