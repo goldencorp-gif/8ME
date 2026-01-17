@@ -22,6 +22,21 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
   } catch (error: any) {
     // 1. Normalize the error message
     let msg = error?.message || '';
+    
+    // Check if error message is actually stringified JSON (common with Google API errors)
+    if (typeof msg === 'string' && (msg.trim().startsWith('{') || msg.trim().startsWith('['))) {
+        try {
+            const parsed = JSON.parse(msg);
+            if (parsed.error && parsed.error.message) {
+                msg = parsed.error.message;
+            } else if (parsed.message) {
+                msg = parsed.message;
+            }
+        } catch (e) {
+            // keep original msg
+        }
+    }
+
     if (error?.error?.message) {
         msg = error.error.message;
     } else if (typeof error === 'string') {
