@@ -312,16 +312,21 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
                         </div>
                       </td>
                       
-                      {/* Lease Terms Column */}
+                      {/* Lease Terms Column - FIXED UNIT DISPLAY */}
                       <td className="px-8 py-6">
                          {prop.tenantName ? (
                             <div>
                                 <p className="font-bold text-slate-900 text-sm">
                                     ${prop.rentAmount.toLocaleString()} 
-                                    <span className="text-xs text-slate-400 font-normal">
-                                      /{prop.rentFrequency === 'Weekly' ? 'wk' : prop.rentFrequency === 'Monthly' ? 'mo' : 'yr'}
+                                    <span className="text-xs text-slate-400 font-normal ml-1">
+                                      {prop.rentFrequency === 'Annually' ? '/yr' : prop.rentFrequency === 'Weekly' ? '/wk' : '/mo'}
                                     </span>
                                 </p>
+                                {prop.rentFrequency === 'Annually' && (
+                                    <p className="text-[9px] text-slate-400 mt-0.5">
+                                        (~${(prop.rentAmount / 12).toLocaleString(undefined, {maximumFractionDigits: 0})}/mo)
+                                    </p>
+                                )}
                                 <div className="flex items-center gap-1.5 mt-1">
                                     <div className={`w-1.5 h-1.5 rounded-full ${prop.leaseEnd && new Date(prop.leaseEnd) < new Date() ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">

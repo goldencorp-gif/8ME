@@ -55,7 +55,7 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
       // In a real app, this would add to communication log via onUpdateProperty
   };
 
-  const getFreqLabel = (f: string) => f === 'Weekly' ? 'wk' : f === 'Monthly' ? 'mo' : 'yr';
+  const getFreqLabel = (f: string) => f === 'Weekly' ? 'wk' : f === 'Monthly' ? 'mo' : f === 'Annually' ? 'yr' : 'mo';
 
   return (
     <div className="fixed inset-0 z-[60] overflow-hidden">
@@ -221,7 +221,7 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
                                      <p className="font-bold text-slate-900 text-sm">{doc.name}</p>
                                      <p className="text-xs text-slate-400 mt-0.5 uppercase tracking-wide">{doc.category} • {doc.dateAdded}</p>
                                   </div>
-                               </div>
+                                </div>
                                <button className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">
                                   View
                                </button>

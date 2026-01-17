@@ -51,7 +51,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
         suggestTask.description || '', 
         suggestTask.propertyAddress || ''
       ).then(text => {
-         setAssistantMessage(`${text}`);
+         setAssistantMessage(`${text || 'No specific advice generated.'}`);
          setProcessing(false);
       });
     }
@@ -168,7 +168,7 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     setAssistantMessage("Analyzing schedule...");
     try {
       const msg = await generateScheduleTips(dayEvents);
-      setAssistantMessage(`Tip: ${msg}`);
+      setAssistantMessage(`Tip: ${msg || 'Keep up the good work!'}`);
     } catch (e) {
       setAssistantMessage("Could not generate tips at this time.");
     }
@@ -198,7 +198,8 @@ const ScheduleAssistant: React.FC<ScheduleAssistantProps> = ({
     if (!q) return;
     setProcessing(true);
     const summary = await summarizePropertyHistory(q, allHistoryEvents);
-    setHistoryResult(summary || '');
+    // FIX: Provide a default string to prevent type error if API returns undefined
+    setHistoryResult(summary || 'No records found matching your query.');
     setProcessing(false);
   };
 
