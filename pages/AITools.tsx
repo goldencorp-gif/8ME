@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { generatePropertyDescription, analyzeArrearsMessage, parseInvoiceRequest, generateQuoteRequestEmail, generateBackgroundCheck, generateOfficialDocument, generateProspectingMessage } from '../services/geminiService';
+import { generatePropertyDescription, analyzeArrearsMessage, parseInvoiceRequest, generateQuoteRequestEmail, generateBackgroundCheck, generateOfficialDocument, generateProspectingMessage, generateConsentForm } from '../services/geminiService';
 import { Property, Transaction, PropertyDocument } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -57,6 +57,12 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
   const [applicantId, setApplicantId] = useState('');
   const [applicantAddr, setApplicantAddr] = useState('');
   const [result, setResult] = useState('');
+
+  // Consent Generator State
+  const [consentName, setConsentName] = useState('');
+  const [consentLicence, setConsentLicence] = useState('');
+  const [consentState, setConsentState] = useState('');
+  const [consentHtml, setConsentHtml] = useState<string | null>(null);
   
   // Check for API Key on mount
   useEffect(() => {
@@ -144,6 +150,36 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
         handleError(e); 
     }
     setLoading(false);
+  };
+
+  const handleGenerateConsent = async () => {
+      if (!consentName || !consentLicence || !consentState) {
+          alert("Please fill in all fields.");
+          return;
+      }
+      setLoading(true);
+      setConsentHtml(null);
+      try {
+          const html = await generateConsentForm(consentName, consentLicence, consentState);
+          setConsentHtml(html);
+      } catch (e) {
+          handleError(e);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const handlePrintConsent = () => {
+      if (!consentHtml) return;
+      const win = window.open('', '_blank');
+      if (win) {
+          win.document.write(consentHtml);
+          win.document.close();
+          // Small delay to ensure images/css load if any
+          setTimeout(() => {
+              win.print();
+          }, 500);
+      }
   };
 
   const handleGenerateForm = async () => {
@@ -244,7 +280,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                 onClick={() => setViewMode('quick')} 
                 className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'quick' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                Screening Tool
+                Quick Tools
               </button>
           </div>
       </div>
@@ -355,9 +391,10 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           </div>
       )}
 
-      {/* VIEW: APPLICANT SCREENING (Dedicated Quick Tool) */}
+      {/* VIEW: QUICK TOOLS (Screening, Consent, etc) */}
       {viewMode === 'quick' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              
               {/* Screening Input Card */}
               <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col">
                   <div className="flex items-center space-x-3 mb-6">
@@ -406,9 +443,73 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                   </button>
               </div>
 
+              {/* Consent Generator Card */}
+              <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col">
+                  <div className="flex items-center space-x-3 mb-6">
+                      <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      </div>
+                      <h3 className="font-bold text-slate-900">Background Check Consent</h3>
+                  </div>
+                  <div className="space-y-4 flex-1">
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Applicant Full Name</label>
+                          <input 
+                            type="text" 
+                            value={consentName} 
+                            onChange={(e) => setConsentName(e.target.value)} 
+                            placeholder="e.g. Jane Smith" 
+                            className={inputClass} 
+                          />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div>
+                              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Licence No.</label>
+                              <input 
+                                type="text" 
+                                value={consentLicence} 
+                                onChange={(e) => setConsentLicence(e.target.value)} 
+                                placeholder="e.g. 87654321" 
+                                className={inputClass} 
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">State</label>
+                              <select 
+                                value={consentState}
+                                onChange={(e) => setConsentState(e.target.value)}
+                                className={inputClass}
+                              >
+                                <option value="">Select...</option>
+                                <option value="NSW">NSW</option>
+                                <option value="VIC">VIC</option>
+                                <option value="QLD">QLD</option>
+                                <option value="WA">WA</option>
+                                <option value="SA">SA</option>
+                                <option value="TAS">TAS</option>
+                                <option value="ACT">ACT</option>
+                                <option value="NT">NT</option>
+                              </select>
+                          </div>
+                      </div>
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                          <p className="text-xs text-slate-500 leading-relaxed italic">
+                              Generates a compliant consent form for checking TICA, NTD, and credit history databases using the ID provided.
+                          </p>
+                      </div>
+                  </div>
+                  <button 
+                    onClick={handleGenerateConsent} 
+                    disabled={loading || !hasApiKey || !consentName || !consentLicence || !consentState} 
+                    className="w-full mt-6 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 disabled:bg-slate-300 transition-colors shadow-lg"
+                  >
+                      {loading ? 'Drafting...' : 'Draft Consent Form'}
+                  </button>
+              </div>
+
               {/* Result: Screening Report */}
               {result && (
-                  <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-indigo-200 shadow-xl shadow-indigo-500/10 animate-in zoom-in-95 duration-300 flex flex-col">
+                  <div className="bg-white p-8 rounded-[2rem] border border-indigo-200 shadow-xl shadow-indigo-500/10 animate-in zoom-in-95 duration-300 flex flex-col">
                       <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                           <h4 className="text-lg font-black text-slate-900 tracking-tight">Screening Result</h4>
                           <div className="flex space-x-3">
@@ -428,6 +529,36 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                       </div>
                       <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed font-medium bg-slate-50 p-6 rounded-2xl border border-slate-100 overflow-y-auto max-h-[500px]">
                           {result}
+                      </div>
+                  </div>
+              )}
+
+              {/* Result: Consent Form */}
+              {consentHtml && (
+                  <div className="bg-white p-8 rounded-[2rem] border border-emerald-200 shadow-xl shadow-emerald-500/10 animate-in zoom-in-95 duration-300 flex flex-col min-h-[500px]">
+                      <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                          <h4 className="text-lg font-black text-slate-900 tracking-tight">Consent Form Ready</h4>
+                          <div className="flex space-x-3">
+                              <button 
+                                  onClick={handleReportContent}
+                                  className="px-3 py-1 bg-white border border-slate-200 text-slate-500 rounded-md text-xs font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                              >
+                                  Report
+                              </button>
+                              <button 
+                                  onClick={handlePrintConsent}
+                                  className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold hover:bg-emerald-200"
+                              >
+                                  Print / PDF
+                              </button>
+                          </div>
+                      </div>
+                      <div className="flex-1 bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden relative">
+                          <iframe 
+                              srcDoc={consentHtml} 
+                              className="w-full h-full absolute inset-0 border-0"
+                              title="Consent Preview"
+                          />
                       </div>
                   </div>
               )}

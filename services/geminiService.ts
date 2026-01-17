@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { CalendarEvent, Property } from "../types";
 
@@ -318,4 +317,31 @@ export const generateTaskSuggestions = async (title: string, type: string, descr
         Suggest 3 preparation steps or things to check before attending. Bullet points.`
     });
     return response.text;
+};
+
+// 19. Background Check Consent Form
+export const generateConsentForm = async (name: string, licence: string, state: string) => {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Generate a professional "Background Check Consent Form" for a rental application.
+        
+        Applicant Details:
+        - Name: ${name}
+        - Driver Licence: ${licence}
+        - Issuing State: ${state}
+        
+        Requirements:
+        1. Use clear, plain English (legal but accessible).
+        2. Explicitly state that the applicant consents to the Agency (8 Miles Estate) conducting background checks, including:
+           - Identity verification using the provided Driver Licence.
+           - Tenancy database checks (e.g. TICA, NTD).
+           - Credit history and bankruptcy checks.
+           - Rental history verification with previous agents.
+        3. Include a formal "Consent Declaration" section.
+        4. Include formatting for "Signature" and "Date" at the bottom (plain text lines or boxes).
+        5. Output strictly valid HTML with inline CSS for a clean, printable document. Do not include markdown backticks.`
+    });
+    let html = response.text || "";
+    return html.replace(/```html|```/g, "");
 };
