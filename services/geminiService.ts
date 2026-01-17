@@ -80,11 +80,28 @@ const cleanJsonString = (text: string | undefined | null) => {
   return clean;
 };
 
-// Helper to clean HTML string from Markdown
+// Helper to clean HTML string from Markdown (Robust Version)
 const cleanHtmlOutput = (text: string | undefined | null) => {
   if (!text) return '';
-  // Remove markdown code blocks like ```html ... ```
-  return text.replace(/```html/g, '').replace(/```/g, '').trim();
+  
+  // 1. Try to extract from markdown blocks first (greedy match for content inside backticks)
+  const markdownMatch = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
+  let content = markdownMatch ? markdownMatch[1] : text;
+
+  // 2. If no markdown, or even after extraction, check for HTML tags to strip conversational text
+  // Look for standard HTML starts
+  const htmlStart = content.search(/<!DOCTYPE html>|<html/i);
+  if (htmlStart !== -1) {
+      content = content.substring(htmlStart);
+  }
+  
+  // Look for end tag
+  const htmlEnd = content.search(/<\/html>/i);
+  if (htmlEnd !== -1) {
+      content = content.substring(0, htmlEnd + 7);
+  }
+
+  return content.trim();
 };
 
 // --- CORE GENERATION FUNCTIONS ---
@@ -446,12 +463,15 @@ export const generateOfficialDocument = async (formType: string, contextData: an
     ${JSON.stringify(contextData, null, 2)}
     
     Instructions:
-    1. Return valid HTML code ONLY. No markdown backticks.
-    2. Include professional CSS styling within a <style> block. The style should be suitable for print/PDF (white background, black text, clear headers).
-    3. Pre-fill all fields possible using the Context Data.
-    4. Leave placeholders (e.g., [Signature]) for fields that cannot be filled.
-    5. The document should look like a standard official real estate form.
-    6. Include a section at the bottom for "Agency Use Only" or "Signatures".
+    1. Return valid HTML code ONLY. 
+    2. Do NOT wrap in markdown code blocks (no \`\`\`html ... \`\`\`).
+    3. Do NOT include conversational text before or after the HTML.
+    4. Start immediately with <!DOCTYPE html> or <html>.
+    5. Include professional CSS styling within a <style> block. The style should be suitable for print/PDF (white background, black text, clear headers).
+    6. Pre-fill all fields possible using the Context Data.
+    7. Leave placeholders (e.g., [Signature]) for fields that cannot be filled.
+    8. The document should look like a standard official real estate form.
+    9. Include a section at the bottom for "Agency Use Only" or "Signatures".
   `;
 
   const response = await generateContentWithRetry(ai, {
@@ -459,6 +479,6 @@ export const generateOfficialDocument = async (formType: string, contextData: an
     contents: prompt,
   });
   
-  // Use cleanHtmlOutput to properly handle HTML output
+  // Use cleanHtmlOutput to properly handle HTML output and strip any markdown that might still be present
   return cleanHtmlOutput(response.text);
 };
