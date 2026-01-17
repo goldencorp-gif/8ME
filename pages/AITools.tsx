@@ -218,17 +218,23 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
       const prop = properties.find(p => p.id === selectedPropertyId);
       if (!prop) return;
 
-      const category = Object.keys(FORM_CATEGORIES).find(cat => FORM_CATEGORIES[cat].includes(selectedForm)) || 'Admin';
+      // Smart Categorization: Ensure docs go to visible folders (Legal, Inspection, Applications)
+      // Default fallback is 'Legal' to ensure visibility in the Vault
+      let safeCategory: PropertyDocument['category'] = 'Legal'; 
       
-      const safeCategory: any = category.includes('Leasing') ? 'Legal' : category.includes('Trust') ? 'Legal' : 'Communication';
+      if (selectedForm.includes('Inspection') || selectedForm.includes('Condition Report')) {
+          safeCategory = 'Inspection';
+      } else if (selectedForm.includes('Application')) {
+          safeCategory = 'Applications';
+      }
 
       const newDoc: PropertyDocument = {
           id: `DOC-${Date.now()}`,
-          name: `${selectedForm} - ${new Date().toLocaleDateString()}.pdf`, // Naming convention
+          name: `${selectedForm} - ${new Date().toLocaleDateString()}.doc`, // Saved as .doc for editability (Word compatible HTML)
           category: safeCategory, 
-          type: 'PDF', // We treat the HTML as a PDF source
+          type: 'Text', // Text type indicates editable content
           dateAdded: new Date().toISOString().split('T')[0],
-          size: '120 KB',
+          size: '24 KB',
           content: { customHtml: generatedDoc } // Store the HTML
       };
 
