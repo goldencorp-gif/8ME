@@ -318,7 +318,9 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
                             <div>
                                 <p className="font-bold text-slate-900 text-sm">
                                     ${prop.rentAmount.toLocaleString()} 
-                                    <span className="text-xs text-slate-400 font-normal">/{prop.rentFrequency === 'Weekly' ? 'wk' : 'mo'}</span>
+                                    <span className="text-xs text-slate-400 font-normal">
+                                      /{prop.rentFrequency === 'Weekly' ? 'wk' : prop.rentFrequency === 'Monthly' ? 'mo' : 'yr'}
+                                    </span>
                                 </p>
                                 <div className="flex items-center gap-1.5 mt-1">
                                     <div className={`w-1.5 h-1.5 rounded-full ${prop.leaseEnd && new Date(prop.leaseEnd) < new Date() ? 'bg-rose-500' : 'bg-emerald-500'}`} />
@@ -328,7 +330,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
                                             : 'Periodic'}
                                     </p>
                                 </div>
-                                {prop.bondAmount && <p className="text-[9px] text-slate-400 mt-0.5">Bond: ${prop.bondAmount}</p>}
+                                {prop.bondAmount && <p className="text-[9px] text-slate-400 mt-0.5">Bond: ${prop.bondAmount.toLocaleString()}</p>}
                             </div>
                          ) : (
                             <span className="text-xs text-slate-400 italic">No Active Lease</span>
@@ -344,7 +346,7 @@ const Tenancies: React.FC<TenanciesProps> = ({ properties, maintenanceTasks = []
                                 title="View Condition Report Actions"
                                 className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${inspection.classes} flex items-center gap-1`}
                             >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 00-2-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                                 {inspection.label}
                             </button>
 

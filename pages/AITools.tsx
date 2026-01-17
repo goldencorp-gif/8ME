@@ -52,9 +52,10 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
   const [loading, setLoading] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<string | null>(null);
   
-  // Quick Tools State (Legacy)
-  const [address, setAddress] = useState('');
-  const [features, setFeatures] = useState('');
+  // Screening Tool State
+  const [applicantName, setApplicantName] = useState('');
+  const [applicantId, setApplicantId] = useState('');
+  const [applicantAddr, setApplicantAddr] = useState('');
   const [result, setResult] = useState('');
   
   // Check for API Key on mount
@@ -108,14 +109,40 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
       }
   };
 
-  const handleGenerateListing = async () => {
-    if (!address) return;
+  const handleScreenApplicant = async () => {
+    if (!applicantName || !applicantId) {
+        alert("Please provide at least a Name and ID Number.");
+        return;
+    }
     setResult('');
     setLoading(true);
     try {
-        const desc = await generatePropertyDescription(address, features.split(',').map(f => f.trim()));
-        setResult(desc || 'Failed to generate');
-    } catch (e) { handleError(e); }
+        const data = await generateBackgroundCheck(applicantName, applicantId, applicantAddr);
+        
+        let output = `## TENANT SCREENING REPORT\n`;
+        output += `**Date:** ${new Date().toLocaleDateString()}\n`;
+        output += `**Applicant:** ${applicantName}\n`;
+        output += `**ID / DL:** ${applicantId}\n\n`;
+        
+        output += `### ASSESSMENT\n`;
+        output += `**Risk Level:** ${data.riskLevel || 'Unknown'}\n`;
+        output += `**Credit Score Est:** ${data.score || 'N/A'}\n\n`;
+        
+        output += `### SUMMARY\n${data.summary}\n\n`;
+        
+        output += `### RISK FACTORS\n`;
+        if (data.flags && data.flags.length > 0) {
+            data.flags.forEach((f: string) => output += `- ${f}\n`);
+        } else {
+            output += `- No significant negative flags detected.\n`;
+        }
+        
+        output += `\n*Disclaimer: This is an AI-generated estimation based on provided data points. It does not constitute a formal credit check from Equifax or Experian.*`;
+
+        setResult(output);
+    } catch (e) { 
+        handleError(e); 
+    }
     setLoading(false);
   };
 
@@ -157,8 +184,6 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
 
       const category = Object.keys(FORM_CATEGORIES).find(cat => FORM_CATEGORIES[cat].includes(selectedForm)) || 'Admin';
       
-      // Map category to valid PropertyDocument types if needed, or just string cast
-      // The types definition for PropertyDocument.category might need expansion or loose typing
       const safeCategory: any = category.includes('Leasing') ? 'Legal' : category.includes('Trust') ? 'Legal' : 'Communication';
 
       const newDoc: PropertyDocument = {
@@ -206,7 +231,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
       <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-slate-200 pb-6">
           <div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight">Smart Document Center</h2>
-            <p className="text-slate-500 mt-2 max-w-xl">Generate compliant real estate forms, legal agreements, and marketing copy instantly using Gemini AI.</p>
+            <p className="text-slate-500 mt-2 max-w-xl">Generate compliant real estate forms, legal agreements, and manage applicant screening.</p>
           </div>
           <div className="flex bg-slate-100 p-1 rounded-xl">
               <button 
@@ -219,7 +244,7 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                 onClick={() => setViewMode('quick')} 
                 className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'quick' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                Quick Tools
+                Screening Tool
               </button>
           </div>
       </div>
@@ -330,31 +355,62 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
           </div>
       )}
 
-      {/* VIEW: QUICK TOOLS (Legacy Layout) */}
+      {/* VIEW: APPLICANT SCREENING (Dedicated Quick Tool) */}
       {viewMode === 'quick' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Listing Generator */}
+              {/* Screening Input Card */}
               <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col">
                   <div className="flex items-center space-x-3 mb-6">
                       <div className="p-3 bg-indigo-100 rounded-2xl text-indigo-600">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2-2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       </div>
-                      <h3 className="font-bold text-slate-900">Listing Description</h3>
+                      <h3 className="font-bold text-slate-900">Rental Applicant Check</h3>
                   </div>
                   <div className="space-y-4 flex-1">
-                      <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" className={inputClass} />
-                      <textarea value={features} onChange={(e) => setFeatures(e.target.value)} placeholder="Features (3 beds, pool, etc.)" className={`${inputClass} h-24`} />
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Applicant Full Name</label>
+                          <input 
+                            type="text" 
+                            value={applicantName} 
+                            onChange={(e) => setApplicantName(e.target.value)} 
+                            placeholder="e.g. John Doe" 
+                            className={inputClass} 
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Driver's License / ID</label>
+                          <input 
+                            type="text" 
+                            value={applicantId} 
+                            onChange={(e) => setApplicantId(e.target.value)} 
+                            placeholder="e.g. 12345678" 
+                            className={inputClass} 
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Current Address / History</label>
+                          <textarea 
+                            value={applicantAddr} 
+                            onChange={(e) => setApplicantAddr(e.target.value)} 
+                            placeholder="Previous address history..." 
+                            className={`${inputClass} h-24 resize-none`} 
+                          />
+                      </div>
                   </div>
-                  <button onClick={handleGenerateListing} disabled={loading || !hasApiKey} className="w-full mt-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 disabled:bg-slate-300 transition-colors">
-                      {loading ? 'Thinking...' : 'Generate'}
+                  <button 
+                    onClick={handleScreenApplicant} 
+                    disabled={loading || !hasApiKey || !applicantName || !applicantId} 
+                    className="w-full mt-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 disabled:bg-slate-300 transition-colors shadow-lg"
+                  >
+                      {loading ? 'Analyzing...' : 'Run Credit Check'}
                   </button>
               </div>
 
-              {/* Result: General Text */}
+              {/* Result: Screening Report */}
               {result && (
-                  <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-indigo-200 shadow-xl shadow-indigo-500/10 animate-in zoom-in-95 duration-300">
-                      <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-lg font-bold text-slate-900">Generated Content</h4>
+                  <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-indigo-200 shadow-xl shadow-indigo-500/10 animate-in zoom-in-95 duration-300 flex flex-col">
+                      <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                          <h4 className="text-lg font-black text-slate-900 tracking-tight">Screening Result</h4>
                           <div className="flex space-x-3">
                               <button 
                                   onClick={handleReportContent}
@@ -363,14 +419,14 @@ const AITools: React.FC<AIToolsProps> = ({ properties = [], onAddTransaction, on
                                   Report
                               </button>
                               <button 
-                                  onClick={() => { navigator.clipboard.writeText(result); alert('Copied!'); }}
+                                  onClick={() => { navigator.clipboard.writeText(result); alert('Report Copied!'); }}
                                   className="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200"
                               >
-                                  Copy
+                                  Copy Report
                               </button>
                           </div>
                       </div>
-                      <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed font-medium">
+                      <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed font-medium bg-slate-50 p-6 rounded-2xl border border-slate-100 overflow-y-auto max-h-[500px]">
                           {result}
                       </div>
                   </div>

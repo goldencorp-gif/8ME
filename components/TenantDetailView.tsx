@@ -55,6 +55,8 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
       // In a real app, this would add to communication log via onUpdateProperty
   };
 
+  const getFreqLabel = (f: string) => f === 'Weekly' ? 'wk' : f === 'Monthly' ? 'mo' : 'yr';
+
   return (
     <div className="fixed inset-0 z-[60] overflow-hidden">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
@@ -144,11 +146,14 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ property, onClose, 
                    <div className="space-y-6">
                       <div className="flex justify-between items-end border-b border-slate-50 pb-4">
                          <span className="text-sm font-medium text-slate-500">Rent Amount</span>
-                         <span className="text-xl font-black text-slate-900">${property.rentAmount} <span className="text-xs font-bold text-slate-400">/{property.rentFrequency}</span></span>
+                         <span className="text-xl font-black text-slate-900">
+                            ${property.rentAmount.toLocaleString()} 
+                            <span className="text-xs font-bold text-slate-400">/{getFreqLabel(property.rentFrequency)}</span>
+                         </span>
                       </div>
                       <div className="flex justify-between items-end border-b border-slate-50 pb-4">
                          <span className="text-sm font-medium text-slate-500">Bond Held</span>
-                         <span className="text-xl font-black text-slate-900">${property.bondAmount || '0.00'}</span>
+                         <span className="text-xl font-black text-slate-900">${property.bondAmount ? property.bondAmount.toLocaleString() : '0.00'}</span>
                       </div>
                       <div className="flex justify-between items-end">
                          <span className="text-sm font-medium text-slate-500">Paid To</span>
