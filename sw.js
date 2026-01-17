@@ -1,5 +1,5 @@
 
-const CACHE_NAME = '8me-app-cache-v1';
+const CACHE_NAME = '8me-app-cache-v1.2.4';
 const urlsToCache = [
   '/',
   '/index.html',

@@ -21,13 +21,20 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
     return await ai.models.generateContent(params);
   } catch (error: any) {
     // 1. Extract raw message
-    let rawMsg = error?.message || error?.toString() || '';
-    
+    // Attempt to get the most useful string representation of the error
+    let rawMsg = '';
+    if (error?.message) rawMsg = error.message;
+    else if (error?.error?.message) rawMsg = error.error.message; // Some SDKs nest it
+    else if (typeof error === 'string') rawMsg = error;
+    else rawMsg = JSON.stringify(error); // Fallback for objects
+
     // 2. Parse JSON if applicable (Google often returns JSON string as message in SDK errors)
     let cleanMsg = rawMsg;
+    // Check if the message looks like a JSON object
     if (typeof rawMsg === 'string' && (rawMsg.trim().startsWith('{') || rawMsg.trim().startsWith('['))) {
         try {
             const parsed = JSON.parse(rawMsg);
+            // Handle standard Google Error Structure: { error: { message: "..." } }
             if (parsed.error && parsed.error.message) {
                 cleanMsg = parsed.error.message;
             } else if (parsed.message) {
@@ -39,7 +46,7 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
     }
 
     // 3. Friendly error mapping for common Google API issues
-    if (cleanMsg.includes('API has not been used in project') || cleanMsg.includes('PERMISSION_DENIED')) {
+    if (cleanMsg.includes('API has not been used in project') || cleanMsg.includes('PERMISSION_DENIED') || cleanMsg.includes('SERVICE_DISABLED')) {
         cleanMsg = "Google Gemini API is not enabled. Please go to the Google Cloud Console for your project and enable the 'Generative Language API'.";
     }
 
@@ -48,7 +55,8 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
     const isQuotaHardLimit = msgLower.includes('quota') || msgLower.includes('exceeded');
 
     // 4. Retry logic (Skip if it's a hard quota limit or permission error)
-    if (isRateLimit && !isQuotaHardLimit && retries > 0) {
+    // Don't retry on 403 Permission Denied as it won't resolve itself
+    if (isRateLimit && !isQuotaHardLimit && !cleanMsg.includes('API is not enabled') && retries > 0) {
       await new Promise(resolve => setTimeout(resolve, delay));
       return generateContentWithRetry(ai, params, retries - 1, delay * 2);
     }
@@ -64,7 +72,8 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
 // Helper to clean JSON string from Markdown
 const cleanJsonString = (text: string | undefined | null) => {
   if (!text) return '{}';
-  let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  // Allow matching any language tag or none
+  let clean = text.replace(/```(?:\w+)?/g, '').replace(/```/g, '').trim();
   
   // Find start of JSON (Object or Array)
   const firstCurly = clean.indexOf('{');
@@ -93,9 +102,14 @@ const cleanJsonString = (text: string | undefined | null) => {
 const cleanHtmlOutput = (text: string | undefined | null) => {
   if (!text) return '';
   
+  let content = text;
+
   // 1. Try to extract from markdown blocks first (greedy match for content inside backticks)
-  const markdownMatch = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
-  let content = markdownMatch ? markdownMatch[1] : text;
+  // Regex explains: match ``` optionally followed by any word chars (like html, xml), capture content, match ```
+  const markdownMatch = text.match(/```(?:\w+)?\s*([\s\S]*?)```/i);
+  if (markdownMatch && markdownMatch[1]) {
+      content = markdownMatch[1];
+  }
 
   // 2. If no markdown, or even after extraction, check for HTML tags to strip conversational text
   // Look for standard HTML starts
