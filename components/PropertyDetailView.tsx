@@ -363,7 +363,21 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     let mimeType = "text/plain";
     let filename = doc.name;
 
-    if (doc.content) {
+    if (doc.content && doc.content.customHtml) {
+        // Smart Doc (Editable) - Save as .doc for Word compatibility
+        // Word-friendly HTML wrapper
+        content = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head><meta charset='utf-8'><title>${doc.name}</title></head>
+            <body>${doc.content.customHtml}</body>
+            </html>
+        `;
+        mimeType = "application/msword";
+        // Ensure .doc extension if not present (though AITools saves as .doc usually)
+        if (!filename.toLowerCase().endsWith('.doc') && !filename.toLowerCase().endsWith('.docx')) {
+             filename = filename.replace(/\.[^/.]+$/, "") + ".doc";
+        }
+    } else if (doc.content && doc.content.items) {
       // Generated Invoice - Create HTML file
       content = generateInvoiceHtml(doc);
       mimeType = "text/html";
@@ -773,6 +787,16 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                                 </button>
                               )}
+                              
+                              {/* Download Button */}
+                              <button 
+                                onClick={(e) => handleDownload(doc, e)}
+                                className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-emerald-600 hover:shadow-md transition-all"
+                                title="Download Editable File"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                              </button>
+
                               <button 
                                 onClick={(e) => handlePrintPdf(doc, e)}
                                 className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:shadow-md transition-all"
@@ -1031,7 +1055,7 @@ const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                          >
                            {previewDoc.subCategory === 'Owner' ? (
                              <>
-                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                                Pay Bill from Trust
                              </>
                            ) : (
