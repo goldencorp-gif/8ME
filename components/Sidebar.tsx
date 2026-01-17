@@ -206,7 +206,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Version Tag */}
             <div className="text-center pt-1">
-                <span className="text-[10px] text-slate-600 font-mono tracking-widest opacity-60">v1.2.4</span>
+                <span className="text-[10px] text-slate-600 font-mono tracking-widest opacity-60">v1.2.5</span>
             </div>
         </div>
         </aside>

@@ -28,6 +28,22 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
   const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'billing' | 'integrations' | 'data'>('profile');
   
+  // Profile Form Local State
+  const [profileData, setProfileData] = useState({
+      name: userProfile.name,
+      title: userProfile.title,
+      officeAddress: userProfile.officeAddress || ''
+  });
+
+  // Sync state with props if they change (e.g. initial load)
+  useEffect(() => {
+      setProfileData({
+          name: userProfile.name,
+          title: userProfile.title,
+          officeAddress: userProfile.officeAddress || ''
+      });
+  }, [userProfile.name, userProfile.title, userProfile.officeAddress]);
+
   // Agency Config
   const [agencyDetails, setAgencyDetails] = useState({
     name: 'My Agency',
@@ -75,6 +91,26 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
         });
     });
   }, [userProfile.plan]);
+
+  const handleSaveProfile = async () => {
+      // 1. Update Session/Context (Immediate UI update)
+      const updatedProfile = { ...userProfile, ...profileData };
+      onUpdateProfile(updatedProfile);
+
+      // 2. Persist to Local DB (if user exists there)
+      // This ensures changes persist across sessions for local users
+      const localUser = users.find(u => u.email.toLowerCase() === userProfile.email.toLowerCase());
+      if (localUser) {
+          const updatedUserAccount = { ...localUser, name: profileData.name };
+          await db.users.update(updatedUserAccount);
+          
+          // Update the users list prop via callback to keep UI consistent
+          const newUsersList = users.map(u => u.id === localUser.id ? updatedUserAccount : u);
+          onUpdateUsers(newUsersList);
+      }
+
+      alert("Profile updated successfully.");
+  };
 
   const handleSaveApiKey = () => {
       const currentSettings = JSON.parse(localStorage.getItem('proptrust_agency_settings') || '{}');
@@ -142,11 +178,14 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
       if (newName !== null) {
           const newRole = prompt("Edit Role (Admin, Manager, Viewer):", user.role);
           if (newRole) {
-              const updatedUsers = users.map(u => 
-                  u.id === user.id ? { ...u, name: newName, role: newRole as any } : u
-              );
+              const updatedUser = { ...user, name: newName, role: newRole as any };
+              
+              // Optimistic UI Update
+              const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
               onUpdateUsers(updatedUsers);
-              // In real app, sync to DB here
+              
+              // Persist to DB
+              db.users.update(updatedUser).catch(err => console.error("Failed to update user in DB", err));
           }
       }
   };
@@ -224,8 +263,8 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
               <input 
                 type="text" 
-                value={userProfile.name} 
-                onChange={(e) => onUpdateProfile({...userProfile, name: e.target.value})}
+                value={profileData.name} 
+                onChange={(e) => setProfileData({...profileData, name: e.target.value})}
                 className={inputClass}
               />
             </div>
@@ -233,8 +272,8 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Job Title</label>
               <input 
                 type="text" 
-                value={userProfile.title} 
-                onChange={(e) => onUpdateProfile({...userProfile, title: e.target.value})}
+                value={profileData.title} 
+                onChange={(e) => setProfileData({...profileData, title: e.target.value})}
                 className={inputClass}
               />
             </div>
@@ -243,8 +282,8 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
               <p className="text-[10px] text-slate-400 mb-2">Used as the start/end point for AI Logbook calculations.</p>
               <input 
                 type="text" 
-                value={userProfile.officeAddress || ''} 
-                onChange={(e) => onUpdateProfile({...userProfile, officeAddress: e.target.value})}
+                value={profileData.officeAddress} 
+                onChange={(e) => setProfileData({...profileData, officeAddress: e.target.value})}
                 className={inputClass}
                 placeholder="e.g. 123 Business St, Sydney NSW 2000"
               />
@@ -258,7 +297,12 @@ const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdateProfile, users
                 className={`${inputClass} bg-slate-100 text-slate-500 cursor-not-allowed`}
               />
             </div>
-            <button className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-95">Save Changes</button>
+            <button 
+                onClick={handleSaveProfile}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-95"
+            >
+                Save Changes
+            </button>
           </div>
         )}
 
