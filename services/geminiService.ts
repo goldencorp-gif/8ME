@@ -20,50 +20,44 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
   try {
     return await ai.models.generateContent(params);
   } catch (error: any) {
-    // 1. Normalize the error message
-    let msg = error?.message || '';
+    // 1. Extract raw message
+    let rawMsg = error?.message || error?.toString() || '';
     
-    // Check if error message is actually stringified JSON (common with Google API errors)
-    if (typeof msg === 'string' && (msg.trim().startsWith('{') || msg.trim().startsWith('['))) {
+    // 2. Parse JSON if applicable (Google often returns JSON string as message in SDK errors)
+    let cleanMsg = rawMsg;
+    if (typeof rawMsg === 'string' && (rawMsg.trim().startsWith('{') || rawMsg.trim().startsWith('['))) {
         try {
-            const parsed = JSON.parse(msg);
+            const parsed = JSON.parse(rawMsg);
             if (parsed.error && parsed.error.message) {
-                msg = parsed.error.message;
+                cleanMsg = parsed.error.message;
             } else if (parsed.message) {
-                msg = parsed.message;
+                cleanMsg = parsed.message;
             }
         } catch (e) {
-            // keep original msg
+            // parsing failed, stick with rawMsg
         }
     }
 
-    if (error?.error?.message) {
-        msg = error.error.message;
-    } else if (typeof error === 'string') {
-        msg = error;
+    // 3. Friendly error mapping for common Google API issues
+    if (cleanMsg.includes('API has not been used in project') || cleanMsg.includes('PERMISSION_DENIED')) {
+        cleanMsg = "Google Gemini API is not enabled. Please go to the Google Cloud Console for your project and enable the 'Generative Language API'.";
     }
 
-    const msgLower = msg.toLowerCase();
+    const msgLower = cleanMsg.toLowerCase();
     const isRateLimit = error?.status === 429 || error?.code === 429 || msgLower.includes('429') || msgLower.includes('resource_exhausted');
     const isQuotaHardLimit = msgLower.includes('quota') || msgLower.includes('exceeded');
 
-    // 2. Retry logic (Skip if it's a hard quota limit)
+    // 4. Retry logic (Skip if it's a hard quota limit or permission error)
     if (isRateLimit && !isQuotaHardLimit && retries > 0) {
       await new Promise(resolve => setTimeout(resolve, delay));
       return generateContentWithRetry(ai, params, retries - 1, delay * 2);
     }
     
-    // 3. Attach flags for UI handling
-    if (typeof error === 'object' && error !== null) {
-        error.message = msg; 
-        error.isQuotaError = isQuotaHardLimit || isRateLimit;
-    } else {
-        const wrappedError: any = new Error(msg);
-        wrappedError.isQuotaError = isQuotaHardLimit || isRateLimit;
-        throw wrappedError;
-    }
-    
-    throw error;
+    // 5. Throw a clean Error object with the readable message
+    const finalError: any = new Error(cleanMsg);
+    finalError.originalError = error;
+    finalError.isQuotaError = isQuotaHardLimit || isRateLimit;
+    throw finalError;
   }
 };
 
